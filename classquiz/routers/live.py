@@ -23,7 +23,7 @@ from classquiz.db.models import (
     AnswerDataList,
 )
 from classquiz.auth import check_api_key
-from classquiz.socket_server import ReturnQuestion, sio
+from classquiz.socket_server import ReturnQuestion, emit_per_player_language, sio
 
 settings = settings()
 
@@ -195,16 +195,25 @@ async def set_next_question(game_pin: str, question_number: int, api_key: str):
         raise HTTPException(status_code=404, detail="Game not found or API key not found")
     game_data.current_question = question_number
     await redis.set(f"game:{game_pin}", game_data.model_dump_json(), ex=18000)
-    await sio.emit(
-        "set_question_number",
-        {
-            "question_index": question_number,
-            "question": ReturnQuestion(
-                **game_data.model_dump(include={"questions"})["questions"][question_number]
-            ).model_dump(),
-        },
-        room=game_pin,
-    )
+
+    base_question = game_data.questions[question_number]
+    payloads: dict[str | None, dict] = {}
+
+    def payload_for(language: str | None) -> dict:
+        if language not in payloads:
+            question = base_question.localized(language)
+            payloads[language] = {
+                "question_index": question_number,
+                "question": ReturnQuestion(**question.model_dump(exclude={"translations"})).model_dump(
+                    exclude={"translations"}
+                ),
+            }
+        return payloads[language]
+
+    # Same per-player fanout as the socket handler: this endpoint is a second way to advance a
+    # question, and players who picked a language must get it here too.
+    await emit_per_player_language(game_pin, "set_question_number", payload_for)
+    await sio.emit("set_question_number", payload_for(None), room=f"admin:{game_pin}")
 
 
 @router.get("/scores")

@@ -13,6 +13,7 @@ SPDX-License-Identifier: MPL-2.0
 	import Cookies from 'js-cookie';
 	import BrownButton from '$lib/components/buttons/brown.svelte';
 	import { hcaptcha_site_key, recaptcha_key, sentry_dsn } from '$lib/config';
+	import { languageLabel } from '$lib/languages';
 
 	const { t } = getLocalization();
 
@@ -30,6 +31,10 @@ SPDX-License-Identifier: MPL-2.0
 	let custom_field = $state();
 	let custom_field_value = $state();
 	let captcha_enabled = $state();
+	// Languages this quiz is translated into; empty means it's single-language and no picker shows.
+	let quiz_languages: string[] = $state([]);
+	// '' means play in the language the quiz was authored in.
+	let selected_language = $state('');
 
 	let hcaptchaSitekey = hcaptcha_site_key;
 
@@ -89,6 +94,15 @@ SPDX-License-Identifier: MPL-2.0
 		if (res.status === 200) {
 			captcha_enabled = json.enabled;
 			custom_field = json.custom_field;
+			quiz_languages = json.languages ?? [];
+			// Reset first: this component survives a rejected pin, and a language picked for the
+			// previous quiz must not be submitted for a different one that may not even offer it.
+			selected_language = '';
+			// Default to the language they're already reading the site in, if the quiz offers it.
+			const ui_language = browser ? localStorage.getItem('language') : null;
+			if (ui_language && quiz_languages.includes(ui_language)) {
+				selected_language = ui_language;
+			}
 		}
 		if (res.status === 404) {
 			/*			alertModal.set({
@@ -141,7 +155,8 @@ SPDX-License-Identifier: MPL-2.0
 						username: username,
 						game_pin: game_pin,
 						captcha: captcha_resp,
-						custom_field: custom_field ? custom_field_value : undefined
+						custom_field: custom_field ? custom_field_value : undefined,
+						language: selected_language || undefined
 					});
 				} catch (e) {
 					if (sentry_dsn !== null) {
@@ -164,7 +179,8 @@ SPDX-License-Identifier: MPL-2.0
 							username: username,
 							game_pin: game_pin,
 							captcha: token,
-							custom_field: custom_field ? custom_field_value : undefined
+							custom_field: custom_field ? custom_field_value : undefined,
+							language: selected_language || undefined
 						});
 					});
 				});
@@ -174,7 +190,8 @@ SPDX-License-Identifier: MPL-2.0
 				username: username,
 				game_pin: game_pin,
 				captcha: undefined,
-				custom_field: custom_field ? custom_field_value : undefined
+				custom_field: custom_field ? custom_field_value : undefined,
+				language: selected_language || undefined
 			});
 		}
 	};
@@ -235,6 +252,19 @@ SPDX-License-Identifier: MPL-2.0
 					class="border border-gray-400 self-center text-center text-black ring-0 outline-hidden p-2 rounded-lg focus:shadow-2xl transition-all"
 					bind:value={custom_field_value}
 				/>
+			{/if}
+			{#if quiz_languages.length > 0}
+				<h1 class="text-lg text-center mt-2">{$t('words.language')}</h1>
+				<select
+					class="border border-gray-400 self-center text-center text-black ring-0 outline-hidden p-2 rounded-lg focus:shadow-2xl transition-all"
+					bind:value={selected_language}
+					aria-label={$t('words.language')}
+				>
+					<option value="">{$t('words.original_language')}</option>
+					{#each quiz_languages as code}
+						<option value={code}>{languageLabel(code)}</option>
+					{/each}
+				</select>
 			{/if}
 
 			<div class="mt-2">

@@ -143,6 +143,15 @@ class TextQuizAnswer(BaseModel):
     case_sensitive: bool
 
 
+class QuestionTranslation(BaseModel):
+    """One language's wording of a question. `answers` is positional: entry i is the
+    translation of the authored answers[i]. Correctness, colors and images are never
+    translated, so they stay on the authored answer only."""
+
+    question: str
+    answers: list[str] = []
+
+
 class QuizQuestion(BaseModel):
     question: str
     time: str  # in Secs
@@ -150,6 +159,7 @@ class QuizQuestion(BaseModel):
     answers: list[ABCDQuizAnswer] | RangeQuizAnswer | list[TextQuizAnswer] | list[VotingQuizAnswer] | str
     image: str | None = None
     hide_results: bool | None = False
+    translations: dict[str, QuestionTranslation] | None = None
 
     @field_validator("answers")
     def answers_not_none_if_abcd_type(cls, v, info: ValidationInfo):
@@ -168,6 +178,35 @@ class QuizQuestion(BaseModel):
         if info.data["type"] == QuizQuestionType.CHECK and not isinstance(v[0], ABCDQuizAnswer):
             raise ValueError("Answers can't be none if type is CHECK")
         return v
+
+    def localized(self, language: str | None) -> "QuizQuestion":
+        """Return a copy worded in `language`, falling back to the authored text for
+        anything the translation leaves blank, so a half-translated question still plays."""
+        translation = (self.translations or {}).get(language) if language else None
+        if translation is None:
+            return self
+        localized = self.model_copy(deep=True)
+        localized.question = translation.question or self.question
+        # RANGE answers carry no text and SLIDE answers are a bare string; neither is a list.
+        if isinstance(localized.answers, list):
+            for i, answer in enumerate(localized.answers):
+                text = translation.answers[i] if i < len(translation.answers) else ""
+                if text:
+                    answer.answer = text
+        return localized
+
+    def authored_answer(self, language: str | None, text: str) -> str:
+        """Map an answer submitted in `language` back to the authored wording, so results
+        aggregate into one bucket per answer instead of one per language."""
+        translation = (self.translations or {}).get(language) if language else None
+        if translation is None or not isinstance(self.answers, list):
+            return text
+        for i, answer in enumerate(self.answers):
+            if i < len(translation.answers) and translation.answers[i] == text:
+                return answer.answer
+        # ponytail: ORDER submits a ", "-joined sequence that no single answer matches, so its
+        # results stay per-language. Split-and-map each element if that histogram ever matters.
+        return text
 
 
 class QuizInput(BaseModel):
@@ -260,6 +299,13 @@ class PlayGame(BaseModel):
 
     async def save(self, game_pin: str, ex: int = 7200):
         await redis.set(f"game:{game_pin}", self.model_dump_json(), ex=ex)
+
+    def languages(self) -> list[str]:
+        """Every language at least one question in this quiz is translated into."""
+        languages = set()
+        for question in self.questions:
+            languages.update((question.translations or {}).keys())
+        return sorted(languages)
 
     def to_player_data(self) -> dict:
         return (

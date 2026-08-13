@@ -39,7 +39,8 @@ async def submit_answer_fn(data_answer: int, game_pin: str, player_id: str, now:
     selected_answer = question.answers[data_answer].answer
 
     answer_data_obj = SubmitAnswerData(question_index=game.current_question, answer=selected_answer)
-    answer_right, stored_answer = check_answer(game, answer_data_obj)
+    # A physical controller picks by index and submits the authored wording, so it has no language.
+    answer_right, stored_answer = check_answer(question, answer_data_obj)
     diff = (question_time - now).total_seconds() * 1000
     score = 0
     if answer_right:

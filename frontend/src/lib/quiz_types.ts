@@ -55,6 +55,13 @@ export interface OrderQuizAnswer {
 	id?: number;
 }
 
+// One language's wording of a question. `answers` is positional: entry i translates answers[i].
+// Correctness, colors and images are never translated and stay on the authored answer.
+export interface QuestionTranslation {
+	question: string;
+	answers: string[];
+}
+
 export interface Question {
 	time: string;
 	question: string;
@@ -62,6 +69,7 @@ export interface Question {
 	image?: string;
 	answers: Answers;
 	hide_results?: boolean;
+	translations?: Record<string, QuestionTranslation>;
 }
 
 export type Answers =

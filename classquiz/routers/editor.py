@@ -110,6 +110,14 @@ async def finish_edit(edit_id: str, quiz_input: QuizInput):
         quiz_input.questions[i].question = bleach.clean(
             quiz_input.questions[i].question, tags=ALLOWED_TAGS_FOR_QUIZ, strip=True
         )
+        # Translated text is rendered with {@html} on both screens, same as the authored text,
+        # so it needs the same scrub.
+        for translation in (question.translations or {}).values():
+            translation.question = bleach.clean(translation.question, tags=ALLOWED_TAGS_FOR_QUIZ, strip=True)
+            translation.answers = [
+                html.unescape(bleach.clean(answer, tags=ALLOWED_TAGS_FOR_QUIZ, strip=True))
+                for answer in translation.answers
+            ]
         if image == "":
             question.image = None
         if image is not None and not check_image_string(image)[0]:

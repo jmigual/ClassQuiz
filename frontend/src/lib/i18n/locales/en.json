@@ -195,7 +195,9 @@
         "dislike_plural": "Dislikes",
         "play_plural": "Plays",
         "info": "Info",
-        "player": "Player"
+        "player": "Player",
+        "language": "Language",
+        "original_language": "Original"
     },
     "editor": {
         "time_in_seconds": "Time in seconds",
@@ -228,7 +230,10 @@
         "enable_reorder": "Enable reorder mode",
         "disable_reorder": "Disable reorder mode",
         "advanced_settings": "Advanced Settings",
-        "hide_question_results": "Hide question resuluts?"
+        "hide_question_results": "Hide question resuluts?",
+        "translations": "Translations",
+        "add_language": "Add language",
+        "translate_placeholder": "Translation of: {{text}}"
     },
     "import_page": {
         "need_help": "Need help?",

@@ -4,7 +4,7 @@
 import aiohttp
 from classquiz.config import settings
 from classquiz.db.models import (
-    PlayGame,
+    QuizQuestion,
     QuizQuestionType,
     TextQuizAnswer,
     ABCDQuizAnswer,
@@ -53,10 +53,11 @@ async def check_captcha(captcha_data: str) -> bool:
     return True
 
 
-def check_answer(game_data: PlayGame, data: SubmitAnswerData) -> (bool, str):
-    q_i = int(float(data.question_index))
-    q_type = game_data.questions[q_i].type
-    q_answers = game_data.questions[q_i].answers
+def check_answer(question: QuizQuestion, data: SubmitAnswerData) -> (bool, str):
+    """Check a submission against `question`, which must be worded in the same language the
+    player was shown — otherwise every string comparison below fails on a translated answer."""
+    q_type = question.type
+    q_answers = question.answers
     q_answer = data.answer
     if q_type == QuizQuestionType.ABCD:
         return (check_abcd_question(q_answer, q_answers), data.answer)

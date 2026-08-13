@@ -11,6 +11,7 @@ class JoinGameData(BaseModel):
     game_pin: str
     captcha: str | None = None
     custom_field: str | None = None
+    language: str | None = None
 
 
 class RejoinGameData(BaseModel):

@@ -145,6 +145,7 @@ class CheckIfCaptchaEnabledResponse(BaseModel):
     enabled: bool
     game_mode: str | None = None
     custom_field: str | None = None
+    languages: list[str] = []
 
 
 @router.get("/play/check_captcha/{game_pin}", response_model=CheckIfCaptchaEnabledResponse)
@@ -153,10 +154,12 @@ async def check_if_captcha_enabled(game_pin: str):
     if game is None:
         return JSONResponse(status_code=404, content={"detail": "game not found"})
     game = PlayGame.model_validate_json(game)
-    if game.captcha_enabled:
-        return CheckIfCaptchaEnabledResponse(enabled=True, game_mode=game.game_mode, custom_field=game.custom_field)
-    else:
-        return CheckIfCaptchaEnabledResponse(enabled=False, game_mode=game.game_mode, custom_field=game.custom_field)
+    return CheckIfCaptchaEnabledResponse(
+        enabled=game.captcha_enabled,
+        game_mode=game.game_mode,
+        custom_field=game.custom_field,
+        languages=game.languages(),
+    )
 
 
 @router.get("/join/{game_pin}", deprecated=True)

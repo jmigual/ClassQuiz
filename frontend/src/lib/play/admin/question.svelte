@@ -19,6 +19,7 @@ SPDX-License-Identifier: MPL-2.0
 		timer_res: string;
 		answer_count: number;
 		default_colors: string[];
+		room_languages?: string[];
 	}
 
 	let {
@@ -26,10 +27,26 @@ SPDX-License-Identifier: MPL-2.0
 		selected_question,
 		timer_res = $bindable(),
 		answer_count,
-		default_colors
+		default_colors,
+		room_languages = []
 	}: Props = $props();
 
 	const { t } = getLocalization();
+
+	let question = $derived(quiz_data.questions[selected_question]);
+	// Everyone reads this one screen, so show every language in the room — but only those this
+	// question is actually translated into, or we'd print the authored text several times over.
+	let shown_languages = $derived(
+		room_languages.filter((code) => question.translations?.[code] !== undefined)
+	);
+	// RANGE answers are one object with no text, so there is nothing to line up there.
+	let authored_answers = $derived(
+		Array.isArray(question.answers)
+			? (question.answers as { answer: string }[]).map((a) => a.answer)
+			: []
+	);
+	const translated_answer = (code: string, i: number): string =>
+		question.translations?.[code]?.answers[i] || authored_answers[i] || '';
 
 	let circular_progress = $derived.by(() => {
 		try {
@@ -45,10 +62,15 @@ SPDX-License-Identifier: MPL-2.0
 	});
 </script>
 
-<div class="flex flex-col justify-center w-screen h-1/6">
+<div class="flex flex-col justify-center w-screen min-h-1/6">
 	<h1 class="text-6xl text-center">
-		{@html quiz_data.questions[selected_question].question}
+		{@html question.question}
 	</h1>
+	{#each shown_languages as code}
+		<h2 class="text-3xl text-center opacity-80 mt-1">
+			{@html question.translations[code].question}
+		</h2>
+	{/each}
 	<!--			<span class='text-center py-2 text-lg'>{$t('admin_page.time_left')}: {timer_res}</span>-->
 	<div class="grid grid-cols-3 my-2">
 		<span></span>
@@ -88,8 +110,14 @@ SPDX-License-Identifier: MPL-2.0
 				<span
 					class="text-center text-2xl px-2 py-4 w-full"
 					style="color: {get_foreground_color(answer.color ?? default_colors[i])}"
-					>{answer.answer}</span
 				>
+					{answer.answer}
+					{#each shown_languages as code}
+						<span class="block text-xl opacity-80"
+							>{translated_answer(code, i)}</span
+						>
+					{/each}
+				</span>
 				<span class="pl-4 w-10"></span>
 			</div>
 		{/each}
@@ -99,9 +127,14 @@ SPDX-License-Identifier: MPL-2.0
 		<div class="grid grid-cols-2 gap-2 w-full p-4">
 			{#each quiz_data.questions[selected_question].answers as answer, i}
 				<div class="rounded-lg h-fit flex bg-[#B07156]">
-					<span class="text-center text-2xl px-2 py-4 w-full text-black"
-						>{answer.answer}</span
-					>
+					<span class="text-center text-2xl px-2 py-4 w-full text-black">
+						{answer.answer}
+						{#each shown_languages as code}
+							<span class="block text-xl opacity-80"
+								>{translated_answer(code, i)}</span
+							>
+						{/each}
+					</span>
 					<span class="pl-4 w-10"></span>
 				</div>
 			{/each}

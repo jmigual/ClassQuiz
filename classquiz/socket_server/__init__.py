@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import random
+from typing import Callable
 
 import socketio
 from cryptography.fernet import Fernet
@@ -87,6 +88,32 @@ async def set_answer(answers, game_pin: str, q_index: int, data: AnswerData) -> 
     return answers
 
 
+async def emit_per_player_language(game_pin: str, event: str, payload_for: Callable[[str | None], dict]) -> set[str]:
+    """Emit `event` to every player in the language they joined with, returning the languages present.
+
+    Question text is per-player now, so it can't go out as one broadcast to the game_pin room.
+    `payload_for` is expected to memoize, so a room of 200 speaking three languages builds three
+    payloads rather than two hundred. Callers must emit to `admin:{game_pin}` themselves — the host
+    used to be covered by the game_pin broadcast and no longer is.
+    """
+    languages_key = f"game:{game_pin}:players:languages"
+    player_languages = await redis.hgetall(languages_key)
+    # Refreshed on every question, or a game running longer than the TTL would silently drop every
+    # player back to the authored language mid-session.
+    await redis.expire(languages_key, 7200)
+    active_languages = set()
+    for raw_player in await redis.smembers(f"game_session:{game_pin}:players"):
+        player = GamePlayer.model_validate_json(raw_player)
+        # A box controller joins the player set with no sid; there is no socket to emit to.
+        if player.sid is None:
+            continue
+        language = player_languages.get(player.username)
+        if language is not None:
+            active_languages.add(language)
+        await sio.emit(event, payload_for(language), room=player.sid)
+    return active_languages
+
+
 @sio.event
 async def rejoin_game(sid: str, data: dict):
     redis_res = await redis.get(f"game:{data['game_pin']}")
@@ -119,6 +146,8 @@ async def rejoin_game(sid: str, data: dict):
         "username": data.username,
         "sid_custom": sid,
         "admin": False,
+        # Server-authoritative, so a reconnecting client can't switch language mid-game.
+        "language": await redis.hget(f"game:{data.game_pin}:players:languages", data.username),
     }
     await save_session(sid, sio, session)
     await sio.enter_room(sid, data.game_pin)
@@ -160,6 +189,7 @@ async def join_game(sid: str, data: dict):
         "username": data.username,
         "sid_custom": sid,
         "admin": False,
+        "language": data.language,
     }
     await save_session(sid, sio, session)
     await sio.emit(
@@ -178,6 +208,11 @@ async def join_game(sid: str, data: dict):
             data.username,
             data.custom_field,
         )
+
+    if data.language is not None:
+        languages_key = f"game:{data.game_pin}:players:languages"
+        await redis.hset(languages_key, data.username, data.language)
+        await redis.expire(languages_key, 7200)
 
     await sio.emit(
         "player_joined",
@@ -253,29 +288,48 @@ async def set_question_number(sid: str, data: str):
     game_data.question_show = True
     await game_data.save(session["game_pin"])
     await redis.set(f"game:{session['game_pin']}:current_time", datetime.now().isoformat(), ex=7200)
-    temp_return = game_data.model_dump(include={"questions"})["questions"][int(float(data))]
-    if game_data.questions[int(float(data))].type == QuizQuestionType.SLIDE:
+    question_index = int(float(data))
+    base_question = game_data.questions[question_index]
+    if base_question.type == QuizQuestionType.SLIDE:
         await sio.emit(
             "set_question_number",
             {
-                "question_index": int(float(data)),
+                "question_index": question_index,
             },
             room=sid,
         )
         return
-    if game_data.questions[int(float(data))].type == QuizQuestionType.VOTING:
-        for i in range(len(temp_return["answers"])):
-            temp_return["answers"][i] = VotingQuizAnswer(**temp_return["answers"][i])
-    temp_return["type"] = game_data.questions[int(float(data))].type
-    if temp_return["type"] == QuizQuestionType.ORDER:
-        random.shuffle(temp_return["answers"])
+
+    payloads: dict[str | None, dict] = {}
+
+    def payload_for(language: str | None) -> dict:
+        # Cache by language, not by player: 200 people speaking three languages build three
+        # payloads, not two hundred.
+        if language not in payloads:
+            question = base_question.localized(language)
+            temp_return = question.model_dump(exclude={"translations"})
+            if question.type == QuizQuestionType.VOTING:
+                for i in range(len(temp_return["answers"])):
+                    temp_return["answers"][i] = VotingQuizAnswer(**temp_return["answers"][i])
+            temp_return["type"] = question.type
+            if temp_return["type"] == QuizQuestionType.ORDER:
+                random.shuffle(temp_return["answers"])
+            payloads[language] = {
+                "question_index": question_index,
+                # Never ship the other languages to a player's device.
+                "question": ReturnQuestion(**temp_return).model_dump(exclude={"translations"}),
+            }
+        return payloads[language]
+
+    active_languages = await emit_per_player_language(game_pin, "set_question_number", payload_for)
+
+    # The host needs its own emit plus the languages to stack the question in. Those come from the
+    # players just emitted to, not from the redis hash, so a kicked player (removed from the player
+    # set, but never from the hash) stops appearing on the shared screen.
     await sio.emit(
         "set_question_number",
-        {
-            "question_index": int(float(data)),
-            "question": ReturnQuestion(**temp_return).model_dump(),
-        },
-        room=game_pin,
+        {**payload_for(None), "languages": sorted(active_languages)},
+        room=f"admin:{game_pin}",
     )
 
 
@@ -302,7 +356,12 @@ async def submit_answer(sid: str, data: dict):
         await sio.emit("already_replied", room=sid)
         return
 
-    answer_right, answer = check_answer(game_data, data)
+    # Check against the wording this player was actually shown — every string comparison in
+    # check_answer would otherwise miss on a translated answer — then store the authored
+    # wording so results aggregate across languages.
+    base_question = game_data.questions[question_index]
+    answer_right, answer = check_answer(base_question.localized(session.get("language")), data)
+    answer = base_question.authored_answer(session.get("language"), answer)
     latency = int(float(session["ping"]))
     time_q_started = datetime.fromisoformat(await redis.get(f"game:{session['game_pin']}:current_time"))
     diff = (time_q_started - now).total_seconds() * 1000  # - timedelta(milliseconds=latency)
@@ -366,11 +425,19 @@ async def show_solutions(sid: str, _data: dict):
     game_data = await PlayGame.get_from_redis(session["game_pin"])
     if not session["admin"]:
         return
-    await sio.emit(
-        "solutions",
-        game_data.questions[game_data.current_question].model_dump(),
-        room=session["game_pin"],
-    )
+    game_pin = session["game_pin"]
+    base_question = game_data.questions[game_data.current_question]
+    payloads: dict[str | None, dict] = {}
+
+    def payload_for(language: str | None) -> dict:
+        if language not in payloads:
+            # The solution has to be worded the same way the question was, and must not carry the
+            # other languages along with it.
+            payloads[language] = base_question.localized(language).model_dump(exclude={"translations"})
+        return payloads[language]
+
+    await emit_per_player_language(game_pin, "solutions", payload_for)
+    await sio.emit("solutions", payload_for(None), room=f"admin:{game_pin}")
 
 
 @sio.event

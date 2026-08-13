@@ -267,6 +267,11 @@ SPDX-License-Identifier: MPL-2.0
 						{/await}
 					{/if}
 				</div>
+				<!-- Translations sit alongside the authored text rather than replacing it, so every
+				     answer editor above stays untouched and single-language quizzes see no change. -->
+				{#await import('$lib/editor/TranslationsEditor.svelte') then c}
+					<c.default bind:data bind:selected_question />
+				{/await}
 			</div>
 		{/if}
 	</div>
