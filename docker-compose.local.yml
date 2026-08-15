@@ -1,0 +1,55 @@
+# Local test override: build the branch from source instead of pulling the upstream
+# ghcr :master images, which do not have the translation feature.
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# Then open http://classquiz.localhost:8080
+#
+# Why that name and not localhost: pages like /dashboard fetch /api/* from a universal
+# load(), which runs during SSR *inside* the frontend container -- where localhost is
+# the container itself and nothing is listening. So ORIGIN has to resolve from both the
+# browser and the container. "classquiz.localhost" does:
+#   - Windows getaddrinfo maps *.localhost to loopback (RFC 6761), no hosts entry needed
+#   - inside the compose network it is a network alias for the proxy (below)
+# The published port matches the proxy's internal port so the same URL works on both.
+#
+# To test from a phone on the same wifi, override the host -- *.localhost points a phone
+# at itself, and the server-rendered join QR code is built from ROOT_ADDRESS:
+#   $env:CQ_HOST = (Get-NetIPConfiguration | Where-Object IPv4DefaultGateway).IPv4Address.IPAddress
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+# Then browse http://$env:CQ_HOST:8080 on both machines. Nothing is hardcoded, so a new
+# address after a network change just means running those two lines again.
+
+services:
+  api: &api
+    image: !reset null
+    build: .
+    environment:
+      ROOT_ADDRESS: "http://${CQ_HOST:-classquiz.localhost}:8080"
+      SECRET_KEY: "local-only-not-a-real-secret"
+      TELEMETRY_ENABLED: "False"
+
+  worker:
+    <<: *api
+    command: arq classquiz.worker.WorkerSettings
+
+  frontend:
+    environment:
+      # adapter-node rejects cross-origin form posts unless it knows the public URL,
+      # and SSR resolves relative fetches against it.
+      ORIGIN: "http://${CQ_HOST:-classquiz.localhost}:8080"
+
+  proxy:
+    image: !reset null
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    # Same port inside and out, so one URL is valid from the browser and the container.
+    ports: !override
+      - "8080:8080"
+    networks:
+      default:
+        aliases:
+          - classquiz.localhost
+
+  # The pinned v0.28 is years older than the 0.37 client in Pipfile.lock.
+  meilisearch:
+    image: getmeili/meilisearch:v1.7

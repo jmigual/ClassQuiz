@@ -90,6 +90,21 @@ async def finish_edit(edit_id: str, quiz_input: QuizInput):
     if quiz_input.background_color is not None:
         quiz_input.background_color = bleach.clean(quiz_input.background_color, tags=[], strip=True)
 
+    # Language names are author-supplied and shown as plain text. Unescape what bleach encoded so
+    # an "&" survives as itself, and de-duplicate case-insensitively like the editor does.
+    cleaned_languages = []
+    seen_languages = set()
+    for language in quiz_input.languages:
+        language = html.unescape(bleach.clean(language, tags=[], strip=True)).strip()[:50]
+        if language and language.lower() not in seen_languages:
+            seen_languages.add(language.lower())
+            cleaned_languages.append(language)
+    quiz_input.languages = cleaned_languages[:20]
+
+    if quiz_input.original_language is not None:
+        original = html.unescape(bleach.clean(quiz_input.original_language, tags=[], strip=True)).strip()
+        quiz_input.original_language = original[:50] or None
+
     for i, question in enumerate(quiz_input.questions):
         if question.type == QuizQuestionType.ABCD or question.type == QuizQuestionType.VOTING:
             for i2, answer in enumerate(question.answers):
@@ -148,6 +163,8 @@ async def finish_edit(edit_id: str, quiz_input: QuizInput):
         quiz.cover_image = quiz_input.cover_image
         quiz.background_color = quiz_input.background_color
         quiz.background_image = quiz_input.background_image
+        quiz.languages = quiz_input.languages
+        quiz.original_language = quiz_input.original_language
         quiz.mod_rating = None
         for image in images_to_delete:
             if image is not None:

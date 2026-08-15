@@ -7,8 +7,11 @@ Answers travel back to the server as strings, so showing a player a translated a
 checking it against the authored one silently marks every correct answer wrong. These cover that.
 """
 
+import uuid
+
 from classquiz.db.models import (
     ABCDQuizAnswer,
+    PlayGame,
     QuestionTranslation,
     QuizQuestion,
     QuizQuestionType,
@@ -16,6 +19,20 @@ from classquiz.db.models import (
 )
 from classquiz.socket_server.helpers import check_answer
 from classquiz.socket_server.models import SubmitAnswerData
+
+
+def play_game(**overrides) -> PlayGame:
+    defaults = dict(
+        quiz_id=uuid.uuid4(),
+        description="",
+        user_id=uuid.uuid4(),
+        title="quiz",
+        questions=[abcd_question()],
+        game_id=uuid.uuid4(),
+        game_pin="123456",
+    )
+    defaults.update(overrides)
+    return PlayGame(**defaults)
 
 
 def abcd_question() -> QuizQuestion:
@@ -106,3 +123,26 @@ def test_range_question_survives_a_language_with_no_answer_text():
     localized = question.localized("es")
     assert localized.question == "¿Qué altura tiene?"
     assert check_answer(localized, SubmitAnswerData(question_index=0, answer="50"))[0]
+
+
+def test_available_languages_prefers_the_declared_list():
+    game = play_game(languages=["Catalan", "French"])
+    assert game.available_languages() == ["Catalan", "French"]
+
+
+def test_available_languages_falls_back_to_translation_keys_when_undeclared():
+    # Legacy quizzes saved before the declared list existed have no `languages`, so the
+    # players' choices must still come from whatever the questions were translated into.
+    game = play_game(languages=[])
+    assert game.available_languages() == ["es"]
+
+
+def test_available_languages_is_empty_with_neither():
+    question = QuizQuestion(
+        question="No translations here",
+        time="20",
+        type=QuizQuestionType.ABCD,
+        answers=[ABCDQuizAnswer(right=True, answer="yes")],
+    )
+    game = play_game(languages=[], questions=[question])
+    assert game.available_languages() == []

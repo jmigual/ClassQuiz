@@ -233,7 +233,10 @@
         "hide_question_results": "Hide question resuluts?",
         "translations": "Translations",
         "add_language": "Add language",
-        "translate_placeholder": "Translation of: {{text}}"
+        "translate_placeholder": "Translation of: {{text}}",
+        "languages": "Languages",
+        "original_language_label": "Original language",
+        "language_name_placeholder": "Language name"
     },
     "import_page": {
         "need_help": "Need help?",

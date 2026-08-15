@@ -217,6 +217,8 @@ class QuizInput(BaseModel):
     background_color: str | None = None
     questions: list[QuizQuestion]
     background_image: str | None = None
+    languages: list[str] = []
+    original_language: str | None = None
 
 
 class Quiz(ormar.Model):
@@ -238,6 +240,8 @@ class Quiz(ormar.Model):
     plays: int = ormar.Integer(nullable=False, default=0, server_default="0")
     views: int = ormar.Integer(nullable=False, default=0, server_default="0")
     mod_rating: int | None = ormar.SmallInteger(nullable=True)
+    languages: list[str] | None = ormar.JSON(nullable=True)
+    original_language: str | None = ormar.Text(nullable=True)
 
     ormar_config = ormar.OrmarConfig(
         tablename="quiz",
@@ -290,6 +294,8 @@ class PlayGame(BaseModel):
     background_image: str | None = None
     custom_field: str | None = None
     question_show: bool = False
+    languages: list[str] = []
+    original_language: str | None = None
 
     @classmethod
     async def get_from_redis(self, game_pin: str) -> Self:
@@ -300,12 +306,15 @@ class PlayGame(BaseModel):
     async def save(self, game_pin: str, ex: int = 7200):
         await redis.set(f"game:{game_pin}", self.model_dump_json(), ex=ex)
 
-    def languages(self) -> list[str]:
-        """Every language at least one question in this quiz is translated into."""
-        languages = set()
+    def available_languages(self) -> list[str]:
+        """The languages the author declared, falling back to whatever the questions are
+        actually translated into, for quizzes saved before the declared list existed."""
+        if self.languages:
+            return list(self.languages)
+        found = set()
         for question in self.questions:
-            languages.update((question.translations or {}).keys())
-        return sorted(languages)
+            found.update((question.translations or {}).keys())
+        return sorted(found)
 
     def to_player_data(self) -> dict:
         return (

@@ -35,6 +35,8 @@ SPDX-License-Identifier: MPL-2.0
 	let quiz_languages: string[] = $state([]);
 	// '' means play in the language the quiz was authored in.
 	let selected_language = $state('');
+	// Author-given name for that original language; falls back to the generic "Original" label.
+	let original_language = $state('');
 
 	let hcaptchaSitekey = hcaptcha_site_key;
 
@@ -98,6 +100,7 @@ SPDX-License-Identifier: MPL-2.0
 			// Reset first: this component survives a rejected pin, and a language picked for the
 			// previous quiz must not be submitted for a different one that may not even offer it.
 			selected_language = '';
+			original_language = json.original_language ?? '';
 			// Default to the language they're already reading the site in, if the quiz offers it.
 			const ui_language = browser ? localStorage.getItem('language') : null;
 			if (ui_language && quiz_languages.includes(ui_language)) {
@@ -256,13 +259,19 @@ SPDX-License-Identifier: MPL-2.0
 			{#if quiz_languages.length > 0}
 				<h1 class="text-lg text-center mt-2">{$t('words.language')}</h1>
 				<select
-					class="border border-gray-400 self-center text-center text-black ring-0 outline-hidden p-2 rounded-lg focus:shadow-2xl transition-all"
+					class="border border-gray-400 self-center text-center bg-white text-black dark:bg-gray-700 dark:text-white ring-0 outline-hidden p-2 rounded-lg focus:shadow-2xl transition-all"
 					bind:value={selected_language}
 					aria-label={$t('words.language')}
 				>
-					<option value="">{$t('words.original_language')}</option>
+					<option value="" class="bg-white text-black dark:bg-gray-700 dark:text-white"
+						>{original_language || $t('words.original_language')}</option
+					>
 					{#each quiz_languages as code}
-						<option value={code}>{languageLabel(code)}</option>
+						<option
+							value={code}
+							class="bg-white text-black dark:bg-gray-700 dark:text-white"
+							>{languageLabel(code)}</option
+						>
 					{/each}
 				</select>
 			{/if}

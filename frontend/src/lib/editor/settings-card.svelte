@@ -22,6 +22,28 @@ SPDX-License-Identifier: MPL-2.0
 
 	let { edit_id = $bindable(), data = $bindable() }: Props = $props();
 
+	// Quizzes saved before this field existed have no array, hence the fallbacks here and below.
+	let language_list = $derived(data.languages ?? []);
+	let new_language = $state('');
+
+	const add_language = () => {
+		const trimmed = new_language.trim();
+		const current = data.languages ?? [];
+		if (!trimmed || current.some((l) => l.toLowerCase() === trimmed.toLowerCase())) {
+			return;
+		}
+		data.languages = [...current, trimmed];
+		new_language = '';
+	};
+
+	const remove_language = (name: string) => {
+		if (!confirm(`Remove "${name}"? This deletes its translations from every question.`)) {
+			return;
+		}
+		data.languages = (data.languages ?? []).filter((l) => l !== name);
+		data.questions.forEach((q) => delete q.translations?.[name]);
+	};
+
 	let custom_bg_color = $state(Boolean(data.background_color));
 	const tippy = createTippy({
 		arrow: true,
@@ -202,6 +224,57 @@ SPDX-License-Identifier: MPL-2.0
 						/>
 					{/await}
 				{/if}
+			</div>
+			<div class="flex flex-col items-center pt-10 gap-3 pb-10">
+				<h3>{$t('editor.languages')}</h3>
+				<label class="flex flex-col items-center gap-1">
+					<span class="text-sm">{$t('editor.original_language_label')}</span>
+					<input
+						type="text"
+						maxlength="50"
+						bind:value={data.original_language}
+						placeholder={$t('words.original_language')}
+						class="rounded-lg border-2 border-gray-500 bg-white dark:bg-gray-500 text-black dark:text-white p-2 outline-hidden focus:shadow-2xl transition-all w-64"
+					/>
+				</label>
+				{#if language_list.length > 0}
+					<div class="flex flex-wrap justify-center gap-2 w-2/3">
+						{#each language_list as language}
+							<span
+								class="flex items-center gap-1 rounded-lg bg-gray-200 dark:bg-gray-500 text-black dark:text-white px-2 py-1 text-sm"
+							>
+								{language}
+								<button
+									type="button"
+									aria-label="Remove {language}"
+									class="opacity-70 hover:opacity-100"
+									onclick={() => remove_language(language)}>&times;</button
+								>
+							</span>
+						{/each}
+					</div>
+				{/if}
+				<div class="flex gap-2">
+					<input
+						type="text"
+						maxlength="50"
+						bind:value={new_language}
+						placeholder={$t('editor.language_name_placeholder')}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								e.preventDefault();
+								add_language();
+							}
+						}}
+						class="rounded-lg border-2 border-gray-500 bg-white dark:bg-gray-500 text-black dark:text-white p-2 outline-hidden focus:shadow-2xl transition-all"
+					/>
+					<button
+						type="button"
+						onclick={add_language}
+						class="rounded-lg bg-gray-300 dark:bg-gray-500 text-black dark:text-white px-3 py-2"
+						>{$t('editor.add_language')}</button
+					>
+				</div>
 			</div>
 		</div>
 	</div>

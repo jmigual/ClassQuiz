@@ -21,6 +21,7 @@ SPDX-License-Identifier: MPL-2.0
 		title: string;
 		description: string;
 		questions: Question[];
+		languages?: string[];
 	}
 
 	let responseData = {
@@ -38,6 +39,7 @@ SPDX-License-Identifier: MPL-2.0
 				description: '',
 				public: false,
 				title,
+				languages: [],
 				questions: [
 					/*					{
 						type: QuizQuestionType.ABCD,

@@ -125,6 +125,8 @@ async def start_quiz(
         background_color=quiz.background_color,
         custom_field=custom_field,
         background_image=quiz.background_image,
+        languages=quiz.languages or [],
+        original_language=quiz.original_language,
     )
     code = None
     if cqcs_enabled:
@@ -146,6 +148,7 @@ class CheckIfCaptchaEnabledResponse(BaseModel):
     game_mode: str | None = None
     custom_field: str | None = None
     languages: list[str] = []
+    original_language: str | None = None
 
 
 @router.get("/play/check_captcha/{game_pin}", response_model=CheckIfCaptchaEnabledResponse)
@@ -158,7 +161,8 @@ async def check_if_captcha_enabled(game_pin: str):
         enabled=game.captcha_enabled,
         game_mode=game.game_mode,
         custom_field=game.custom_field,
-        languages=game.languages(),
+        languages=game.available_languages(),
+        original_language=game.original_language,
     )
 
 

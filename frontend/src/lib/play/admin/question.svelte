@@ -36,8 +36,10 @@ SPDX-License-Identifier: MPL-2.0
 	let question = $derived(quiz_data.questions[selected_question]);
 	// Everyone reads this one screen, so show every language in the room — but only those this
 	// question is actually translated into, or we'd print the authored text several times over.
+	// The entry existing isn't enough: opening a language's tab in the editor creates an empty
+	// one, and stacking that would print a blank line under the question.
 	let shown_languages = $derived(
-		room_languages.filter((code) => question.translations?.[code] !== undefined)
+		room_languages.filter((code) => question.translations?.[code]?.question)
 	);
 	// RANGE answers are one object with no text, so there is nothing to line up there.
 	let authored_answers = $derived(
