@@ -7,6 +7,7 @@ SPDX-License-Identifier: MPL-2.0
 <script lang="ts">
 	import type { Question } from '$lib/quiz_types';
 	import { QuizQuestionType } from '$lib/quiz_types';
+	import { get_answer_color } from '$lib/play/answer_colors';
 
 	interface Props {
 		data: any;
@@ -19,10 +20,12 @@ SPDX-License-Identifier: MPL-2.0
 	let quiz_colors = [];
 	let answer_correct: boolean[] = [];
 
-	for (const i of question.answers) {
-		quiz_answers.push(i.answer);
-		quiz_colors.push(i.color);
-		answer_correct.push(i.right);
+	let i = 0;
+	for (const answer of question.answers) {
+		quiz_answers.push(answer.answer);
+		quiz_colors.push(get_answer_color(answer.color, i));
+		answer_correct.push(answer.right);
+		i++;
 	}
 
 	let sorted_data = $state({});

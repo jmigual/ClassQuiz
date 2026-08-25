@@ -10,7 +10,7 @@ SPDX-License-Identifier: MPL-2.0
 	import { kahoot_icons } from '$lib/play/kahoot_mode_assets/kahoot_icons';
 	import CircularTimer from '$lib/play/circular_progress.svelte';
 	// import CircularTimer from '$lib/play/circular_progress.svelte';
-	const default_colors = ['#D6EDC9', '#B07156', '#7F7057', '#4E6E58'];
+	import { get_answer_color } from '$lib/play/answer_colors';
 
 	interface Props {
 		question: Question;
@@ -57,17 +57,17 @@ SPDX-License-Identifier: MPL-2.0
 	<div
 		class="absolute top-0 bottom-0 left-0 right-0 m-auto rounded-full h-fit w-fit border-2 border-black shadow-2xl z-40"
 	>
-		<CircularTimer text={timer_res} progress={circular_progress} color="#ef4444" />
+		<CircularTimer text={timer_res} progress={circular_progress} color="#1368CE" />
 	</div>
 
 	<div class="grid grid-rows-2 grid-flow-col auto-cols-auto gap-2 w-full p-4 h-full">
 		{#each question.answers as answer, i}
 			<button
 				class="rounded-lg h-full flex align-middle justify-center disabled:opacity-60 p-3 border-2 border-black transition-all"
-				style="background-color: {answer.color ??
-					default_colors[i]}; color: {get_foreground_color(
-					answer.color ?? default_colors[i]
-				)}"
+				style="background-color: {get_answer_color(
+					answer.color,
+					i
+				)}; color: {get_foreground_color(get_answer_color(answer.color, i))}"
 				onclick={() => selectAnswer(i)}
 				class:opacity-100={_selected_answers[i]}
 				class:opacity-50={!_selected_answers[i]}

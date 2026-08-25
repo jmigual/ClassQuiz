@@ -16,6 +16,7 @@ SPDX-License-Identifier: MPL-2.0
 	import BrownButton from '$lib/components/buttons/brown.svelte';
 	import { get_foreground_color } from '../helpers';
 	import MediaComponent from '$lib/editor/MediaComponent.svelte';
+	import { get_answer_color } from '$lib/play/answer_colors';
 
 	const { t } = getLocalization();
 
@@ -140,7 +141,6 @@ SPDX-License-Identifier: MPL-2.0
 			return '100';
 		}
 	};
-	const default_colors = ['#D6EDC9', '#B07156', '#7F7057', '#4E6E58'];
 </script>
 
 <div class="h-screen w-screen">
@@ -171,17 +171,17 @@ SPDX-License-Identifier: MPL-2.0
 				<div
 					class="absolute top-0 bottom-0 left-0 right-0 m-auto rounded-full h-fit w-fit border-2 border-black shadow-2xl z-40"
 				>
-					<CircularTimer text={timer_res} progress={circular_progress} color="#ef4444" />
+					<CircularTimer text={timer_res} progress={circular_progress} color="#1368CE" />
 				</div>
 
 				<div class="grid grid-rows-2 grid-flow-col auto-cols-auto gap-2 w-full p-4 h-full">
 					{#each question.answers as answer, i}
 						<button
 							class="rounded-lg h-full flex align-middle justify-center disabled:opacity-60 p-3 border-2 border-black"
-							style="background-color: {answer.color ??
-								default_colors[i]}; color: {get_foreground_color(
-								answer.color ?? default_colors[i]
-							)}"
+							style="background-color: {get_answer_color(
+								answer.color,
+								i
+							)}; color: {get_foreground_color(get_answer_color(answer.color, i))}"
 							disabled={selected_answer !== undefined}
 							onclick={() => selectAnswer(answer.answer)}
 						>
@@ -200,7 +200,7 @@ SPDX-License-Identifier: MPL-2.0
 			</div>
 		{:else if question.type === QuizQuestionType.RANGE}
 			<span
-				class="fixed top-0 bg-red-500 h-8 transition-all"
+				class="fixed top-0 bg-[#1368CE] h-8 transition-all"
 				style="width: {(100 / parseInt(question.time)) * parseInt(timer_res)}vw"
 			></span>
 			{#await import('svelte-range-slider-pips')}
@@ -228,7 +228,7 @@ SPDX-License-Identifier: MPL-2.0
 		{:else if question.type === QuizQuestionType.TEXT}
 			<div>
 				<span
-					class="fixed top-0 bg-red-500 h-8 transition-all"
+					class="fixed top-0 bg-[#1368CE] h-8 transition-all"
 					style="width: {(100 / parseInt(question.time)) * parseInt(timer_res)}vw"
 				></span>
 				<div class="flex justify-center mt-10">
@@ -262,7 +262,7 @@ SPDX-License-Identifier: MPL-2.0
                             <Spinner />
                         {:else}-->
 			<span
-				class="fixed top-0 bg-red-500 h-8 transition-all"
+				class="fixed top-0 bg-[#1368CE] h-8 transition-all"
 				style="width: {(100 / parseInt(question.time)) * parseInt(timer_res)}vw"
 			></span>
 			<div class="flex flex-col w-full h-full gap-4 px-4 py-6 mt-10">
@@ -270,7 +270,7 @@ SPDX-License-Identifier: MPL-2.0
 					<div
 						class="w-full h-fit flex-row rounded-lg p-2 align-middle"
 						animate:flip={{ duration: 100 }}
-						style="background-color: {answer.color ?? '#b07156'}"
+						style="background-color: {get_answer_color(answer.color, i)}"
 					>
 						<button
 							onclick={() => {

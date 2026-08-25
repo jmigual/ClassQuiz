@@ -14,10 +14,9 @@ SPDX-License-Identifier: MPL-2.0
 	import { ABCDQuestionSchema } from '$lib/yupSchemas';
 	import { getLocalization } from '$lib/i18n';
 	import { get_foreground_color } from '$lib/helpers';
+	import { default_colors } from '$lib/play/answer_colors';
 
 	const { t } = getLocalization();
-
-	const default_colors = ['#D6EDC9', '#B07156', '#7F7057', '#4E6E58'];
 
 	interface Props {
 		selected_question: number;

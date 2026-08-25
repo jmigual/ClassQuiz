@@ -12,13 +12,13 @@ SPDX-License-Identifier: MPL-2.0
 	import CircularTimer from '$lib/play/circular_progress.svelte';
 	import MediaComponent from '$lib/editor/MediaComponent.svelte';
 	import { getLocalization } from '$lib/i18n';
+	import { get_answer_color } from '$lib/play/answer_colors';
 
 	interface Props {
 		quiz_data: QuizData;
 		selected_question: number;
 		timer_res: string;
 		answer_count: number;
-		default_colors: string[];
 		room_languages?: string[];
 	}
 
@@ -27,7 +27,6 @@ SPDX-License-Identifier: MPL-2.0
 		selected_question,
 		timer_res = $bindable(),
 		answer_count,
-		default_colors,
 		room_languages = []
 	}: Props = $props();
 
@@ -77,7 +76,7 @@ SPDX-License-Identifier: MPL-2.0
 	<div class="grid grid-cols-3 my-2">
 		<span></span>
 		<div class="m-auto">
-			<CircularTimer text={timer_res} progress={circular_progress} color="#ef4444" />
+			<CircularTimer text={timer_res} progress={circular_progress} color="#1368CE" />
 		</div>
 		<p class="m-auto text-3xl">
 			{$t('admin_page.answers_submitted', { answer_count: answer_count })}
@@ -98,7 +97,7 @@ SPDX-License-Identifier: MPL-2.0
 		{#each quiz_data.questions[selected_question].answers as answer, i}
 			<div
 				class="rounded-lg h-fit flex border-2 border-black"
-				style="background-color: {answer.color ?? default_colors[i]};"
+				style="background-color: {get_answer_color(answer.color, i)};"
 				class:opacity-50={!answer.right &&
 					timer_res === '0' &&
 					quiz_data.questions[selected_question].type === QuizQuestionType.ABCD}
@@ -106,12 +105,12 @@ SPDX-License-Identifier: MPL-2.0
 				<img
 					class="w-14 inline-block pl-4"
 					alt="icon"
-					style="color: {get_foreground_color(answer.color ?? default_colors[i])}"
+					style="color: {get_foreground_color(get_answer_color(answer.color, i))}"
 					src={kahoot_icons[i]}
 				/>
 				<span
 					class="text-center text-2xl px-2 py-4 w-full"
-					style="color: {get_foreground_color(answer.color ?? default_colors[i])}"
+					style="color: {get_foreground_color(get_answer_color(answer.color, i))}"
 				>
 					{answer.answer}
 					{#each shown_languages as code}
@@ -128,8 +127,8 @@ SPDX-License-Identifier: MPL-2.0
 	{#if timer_res === '0'}
 		<div class="grid grid-cols-2 gap-2 w-full p-4">
 			{#each quiz_data.questions[selected_question].answers as answer, i}
-				<div class="rounded-lg h-fit flex bg-[#B07156]">
-					<span class="text-center text-2xl px-2 py-4 w-full text-black">
+				<div class="rounded-lg h-fit flex bg-[#1368CE]">
+					<span class="text-center text-2xl px-2 py-4 w-full text-white">
 						{answer.answer}
 						{#each shown_languages as code}
 							<span class="block text-xl opacity-80"
