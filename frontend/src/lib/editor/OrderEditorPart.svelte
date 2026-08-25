@@ -12,6 +12,7 @@ SPDX-License-Identifier: MPL-2.0
 	import { fade } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
 	import { get_foreground_color } from '$lib/helpers.ts';
+	import { default_colors } from '$lib/play/answer_colors';
 
 	const { t } = getLocalization();
 
@@ -58,7 +59,6 @@ SPDX-License-Identifier: MPL-2.0
 			id: [i]
 		};
 	}
-	const default_colors = ['#D6EDC9', '#B07156', '#7F7057', '#4E6E58'];
 	const set_colors_if_unset = () => {
 		for (let i = 0; i < data.questions[selected_question].answers.length; i++) {
 			if (!data.questions[selected_question].answers[i].color) {

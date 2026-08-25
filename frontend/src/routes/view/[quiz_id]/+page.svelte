@@ -20,8 +20,7 @@ SPDX-License-Identifier: MPL-2.0
 	import { page } from '$app/state';
 	import ModComponent from './ModComponent.svelte';
 	import { get_foreground_color } from '$lib/helpers.ts';
-
-	const default_colors = ['#D6EDC9', '#B07156', '#7F7057', '#4E6E58'];
+	import { get_answer_color } from '$lib/play/answer_colors';
 
 	const tippy = createTippy({
 		arrow: true,
@@ -278,9 +277,11 @@ SPDX-License-Identifier: MPL-2.0
 							{#each question.answers as answer, index_answer}
 								<div
 									class="p-1 rounded-lg py-4 shadow-xl"
-									style="background-color: {answer.color ??
-										default_colors[index_answer]}; color: {get_foreground_color(
-										answer.color ?? default_colors[index_answer]
+									style="background-color: {get_answer_color(
+										answer.color,
+										index_answer
+									)}; color: {get_foreground_color(
+										get_answer_color(answer.color, index_answer)
 									)}"
 									class:shadow-blue-500={answer.right &&
 										question.type !== QuizQuestionType.VOTING}

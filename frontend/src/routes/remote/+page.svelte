@@ -13,6 +13,8 @@ SPDX-License-Identifier: MPL-2.0
 	import CircularTimer from '$lib/play/circular_progress.svelte';
 	import { getLocalization } from '$lib/i18n';
 	import { navbarVisible } from '$lib/stores.svelte.ts';
+	import { get_answer_color } from '$lib/play/answer_colors';
+	import { get_foreground_color } from '$lib/helpers';
 
 	const data = {
 		game_pin: page.url.searchParams.get('game_pin'),
@@ -243,7 +245,7 @@ SPDX-License-Identifier: MPL-2.0
 			</h1>
 			<!--			<span class='text-center py-2 text-lg'>{$t('admin_page.time_left')}: {timer_res}</span>-->
 			<div class="mx-auto my-2">
-				<CircularTimer text={timer_res} progress={circular_progress} color="#ef4444" />
+				<CircularTimer text={timer_res} progress={circular_progress} color="#1368CE" />
 			</div>
 			{#if game_data.questions[selected_question].image !== null}
 				<div>
@@ -258,15 +260,17 @@ SPDX-License-Identifier: MPL-2.0
 			{#if game_data.questions[selected_question].type === QuizQuestionType.ABCD || game_data.questions[selected_question].type === QuizQuestionType.VOTING}
 				<div class="grid grid-cols-2 gap-2 w-full p-4">
 					{#each game_data.questions[selected_question].answers as answer, i}
+						{@const color = get_answer_color(answer.color, i)}
 						<div
 							class="rounded-lg h-fit flex"
-							style="background-color: {answer.color ?? '#B45309'}"
+							style="background-color: {color}"
 							class:opacity-50={!answer.right &&
 								game_data.questions[selected_question].type ===
 									QuizQuestionType.ABCD}
 						>
-							<span class="text-center text-2xl px-2 py-4 w-full text-black"
-								>{answer.answer}</span
+							<span
+								class="text-center text-2xl px-2 py-4 w-full"
+								style="color: {get_foreground_color(color)}">{answer.answer}</span
 							>
 							<span class="pl-4 w-10"></span>
 						</div>

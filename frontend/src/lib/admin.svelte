@@ -15,7 +15,6 @@ SPDX-License-Identifier: MPL-2.0
 	import type { IGameState } from '$lib/play/admin/game_state.ts';
 
 	const { t } = getLocalization();
-	const default_colors = ['#D6EDC9', '#B07156', '#7F7057', '#4E6E58'];
 
 	let final_results_clicked = $state(false);
 	let timer_interval: NodeJS.Timeout;
@@ -92,7 +91,7 @@ SPDX-License-Identifier: MPL-2.0
 {/if}
 {#if game_state.timer_res !== '0' && game_state.selected_question >= 0}
 	<span
-		class="fixed top-0 bg-red-500 h-8 transition-all"
+		class="fixed top-0 bg-[#1368CE] h-8 transition-all"
 		class:mt-10={game_state.control_visible}
 		style="width: {(100 /
 			parseInt(game_state.quiz_data.questions[game_state.selected_question].time)) *
@@ -122,7 +121,6 @@ SPDX-License-Identifier: MPL-2.0
 				timer_res={game_state.timer_res}
 				answer_count={game_state.answer_count}
 				{room_languages}
-				{default_colors}
 			/>
 		{/if}
 	{/if}
