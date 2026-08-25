@@ -12,6 +12,7 @@ SPDX-License-Identifier: MPL-2.0
 	import { fade } from 'svelte/transition';
 	import { SocketGameControls } from '$lib/play/admin/socket_game_controls.ts';
 	import type { GameState } from '$lib/play/admin/game_state';
+	import { resumeAudioContext } from '$lib/play/gong.ts';
 
 	interface Props {
 		game_pin: string;
@@ -101,6 +102,7 @@ SPDX-License-Identifier: MPL-2.0
 			<GrayButton
 				disabled={game_state.players.length < 1}
 				onclick={() => {
+					resumeAudioContext();
 					socket_game_controls.start_game();
 				}}
 				>{$t('admin_page.start_game')}

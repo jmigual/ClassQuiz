@@ -6,36 +6,73 @@ SPDX-License-Identifier: MPL-2.0
 
 <script lang="ts">
 	import Audio1 from '$lib/assets/music/1-128.mp3';
+	import { browser } from '$app/environment';
+	import { onDestroy } from 'svelte';
 
 	interface Props {
 		play?: boolean;
+		muted?: boolean;
+		volume?: number;
 	}
 
-	let { play = $bindable(false) }: Props = $props();
-	let volume = $state(100);
+	let {
+		play = $bindable(false),
+		muted = $bindable(false),
+		volume = $bindable(100)
+	}: Props = $props();
 
-	const audio = $state(new Audio(Audio1));
+	const audio = $state(browser ? new Audio(Audio1) : undefined);
+	// Plain (non-reactive) on purpose: reading it and writing it inside the same effect
+	// (control_audio) would make the effect a dependency of its own write and self-invalidate.
+	let fade_interval: ReturnType<typeof setInterval> | undefined;
+
 	const control_audio = (play_audio: boolean) => {
+		if (!audio) return;
+		clearInterval(fade_interval);
+		fade_interval = undefined;
 		if (play_audio) {
-			audio.play();
+			audio.volume = volume / 100;
+			audio.currentTime = 0;
 			audio.loop = true;
+			audio.play().catch(() => {});
 		} else {
-			audio.pause();
+			// Fade out over ~300ms instead of a hard cut when the question ends.
+			const start_volume = audio.volume;
+			let step = 0;
+			fade_interval = setInterval(() => {
+				step++;
+				if (!audio) return;
+				audio.volume = Math.max(0, start_volume * (1 - step / 10));
+				if (step >= 10) {
+					clearInterval(fade_interval);
+					fade_interval = undefined;
+					audio.pause();
+				}
+			}, 30);
 		}
 	};
 	$effect(() => {
-		audio.volume = volume / 100;
+		if (audio) audio.muted = muted;
+	});
+	$effect(() => {
+		// Only apply live volume changes outside of a fade; the fade callback above owns
+		// audio.volume while it's running.
+		if (audio && !fade_interval) audio.volume = volume / 100;
 	});
 	$effect(() => {
 		control_audio(play);
 	});
+	onDestroy(() => {
+		clearInterval(fade_interval);
+		audio?.pause();
+	});
 </script>
 
-<div class="fixed top-0 left-0">
-	{#if play}
+<div class="fixed bottom-2 left-2 z-50 flex flex-col items-center gap-2">
+	{#if !muted}
 		<button
 			onclick={() => {
-				play = false;
+				muted = true;
 			}}
 		>
 			<!-- heroicons/volume-up -->
@@ -57,7 +94,7 @@ SPDX-License-Identifier: MPL-2.0
 	{:else}
 		<button
 			onclick={() => {
-				play = true;
+				muted = false;
 			}}
 		>
 			<!-- heroicons/volume-off -->
@@ -86,3 +123,12 @@ SPDX-License-Identifier: MPL-2.0
 	{/if}
 	<input type="range" class="vertical_input" bind:value={volume} min="0" max="100" />
 </div>
+
+<style>
+	.vertical_input {
+		writing-mode: vertical-lr;
+		direction: rtl;
+		width: 8px;
+		height: 6rem;
+	}
+</style>
