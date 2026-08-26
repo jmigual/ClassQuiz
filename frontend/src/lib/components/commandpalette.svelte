@@ -105,6 +105,9 @@ This should be okay, right?
 	};
 
 	const close_cp = (e: KeyboardEvent | undefined) => {
+		if (!open) {
+			return;
+		}
 		if (e) {
 			e.preventDefault();
 		}
@@ -169,11 +172,17 @@ This should be okay, right?
 	};
 
 	const autocomplete_on_tab = (e: KeyboardEvent) => {
+		if (!open) {
+			return;
+		}
 		e.preventDefault();
 		input = bg_text;
 	};
 
 	const on_arrow_down = (e: KeyboardEvent) => {
+		if (!open) {
+			return;
+		}
 		e.preventDefault();
 		if (visible_items.length < 1) {
 			return;
@@ -184,6 +193,9 @@ This should be okay, right?
 		selected += 1;
 	};
 	const on_arrow_up = (e: KeyboardEvent) => {
+		if (!open) {
+			return;
+		}
 		e.preventDefault();
 		if (visible_items.length < 1) {
 			return;
@@ -195,6 +207,9 @@ This should be okay, right?
 	};
 
 	const on_enter = (e: KeyboardEvent) => {
+		if (!open) {
+			return;
+		}
 		if (selected === null) {
 			return;
 		}
@@ -203,6 +218,9 @@ This should be okay, right?
 	};
 
 	onMount(async () => {
+		// Bound on window, so these fire for every keypress anywhere in the app. Every handler
+		// except the opener must bail while the palette is closed, or it steals Tab, the arrow
+		// keys and Escape from every input on every page.
 		tinykeys(window, {
 			'$mod+k': toggle_open,
 			Escape: close_cp,
