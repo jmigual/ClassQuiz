@@ -43,9 +43,9 @@ SPDX-License-Identifier: MPL-2.0
 		play_music = target !== -1 && target_question?.type !== QuizQuestionType.SLIDE;
 		selected_question = target;
 	};
-	const on_time_up = (time_ran_out: boolean) => {
+	const on_time_up = () => {
 		play_music = false;
-		if (time_ran_out) playGong(audio_muted ? 0 : audio_volume / 100);
+		playGong(audio_muted ? 0 : audio_volume / 100);
 	};
 </script>
 

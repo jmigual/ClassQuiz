@@ -17,7 +17,7 @@ SPDX-License-Identifier: MPL-2.0
 
 	interface Props {
 		question: Question;
-		onTimeUp?: (time_ran_out: boolean) => void;
+		onTimeUp?: () => void;
 	}
 
 	let { question = $bindable(), onTimeUp }: Props = $props();
@@ -28,9 +28,6 @@ SPDX-License-Identifier: MPL-2.0
 	let timer_res = $state(question.time);
 	let show_results = $state(false);
 	let time_up_fired = $state(false);
-	// True only when the countdown itself reached zero. Submitting an answer also sets
-	// timer_res to '0', and that must stop the music without sounding "time is out".
-	let time_ran_out = $state(false);
 
 	// Stop the timer if the question is answered
 	const timer = (time: string) => {
@@ -44,7 +41,6 @@ SPDX-License-Identifier: MPL-2.0
 				seconds--;
 			}
 
-			if (seconds <= 0) time_ran_out = true;
 			timer_res = seconds.toString();
 		}, 1000);
 	};
@@ -65,7 +61,7 @@ SPDX-License-Identifier: MPL-2.0
 	$effect(() => {
 		if (timer_res === '0' && question.type !== QuizQuestionType.SLIDE && !time_up_fired) {
 			time_up_fired = true;
-			onTimeUp?.(time_ran_out);
+			onTimeUp?.();
 		}
 	});
 

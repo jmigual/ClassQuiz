@@ -28,9 +28,6 @@ SPDX-License-Identifier: MPL-2.0
 	// timer_res is set to '0' from four different socket handlers below; this latches the
 	// gong to fire exactly once per question.
 	let gong_played_for_question = $state(-1);
-	// True only when the countdown itself reached zero (as opposed to the host ending the
-	// question early via show_solutions/everyone_answered) — the gong means "time is out".
-	let time_ran_out = $state(false);
 
 	interface Props {
 		game_token: string;
@@ -84,7 +81,6 @@ SPDX-License-Identifier: MPL-2.0
 
 	const timer = (time: string) => {
 		let seconds = Number(time);
-		time_ran_out = false;
 		timer_interval = setInterval(() => {
 			if (game_state.timer_res === '0') {
 				clearInterval(timer_interval);
@@ -93,7 +89,6 @@ SPDX-License-Identifier: MPL-2.0
 				seconds--;
 			}
 
-			if (seconds <= 0) time_ran_out = true;
 			game_state.timer_res = seconds.toString();
 		}, 1000);
 	};
@@ -111,9 +106,7 @@ SPDX-License-Identifier: MPL-2.0
 		) {
 			gong_played_for_question = q;
 			play_music = false;
-			// Only the natural countdown expiry counts as "time is out"; the host ending the
-			// question early (show_solutions/everyone_answered) stops the music without a gong.
-			if (time_ran_out) playGong(audio_muted ? 0 : audio_volume / 100);
+			playGong(audio_muted ? 0 : audio_volume / 100);
 		}
 	});
 
