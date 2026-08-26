@@ -110,7 +110,7 @@ SPDX-License-Identifier: MPL-2.0
 		{#if active !== '' && question.translations?.[active]}
 			<div class="flex flex-col gap-2 pt-3">
 				<input
-					class="w-full rounded-lg border-2 border-gray-500 bg-transparent p-2 outline-hidden focus:shadow-2xl"
+					class="w-full rounded-lg border-2 border-gray-500 bg-transparent p-2 outline-hidden focus:border-blue-500 focus:shadow-2xl"
 					bind:value={data.questions[selected_question].translations[active].question}
 					placeholder={$t('editor.translate_placeholder', {
 						text: strip_html(question.question)
@@ -118,7 +118,7 @@ SPDX-License-Identifier: MPL-2.0
 				/>
 				{#each authored_answers as authored, i}
 					<input
-						class="w-full rounded-lg border-2 border-gray-500 bg-transparent p-2 outline-hidden focus:shadow-2xl"
+						class="w-full rounded-lg border-2 border-gray-500 bg-transparent p-2 outline-hidden focus:border-blue-500 focus:shadow-2xl"
 						bind:value={data.questions[selected_question].translations[active].answers[i]}
 						placeholder={$t('editor.translate_placeholder', { text: authored })}
 					/>
