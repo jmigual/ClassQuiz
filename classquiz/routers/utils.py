@@ -7,7 +7,7 @@ import io
 
 import qrcode
 import qrcode.image.svg
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, ValidationError
 from fastapi.responses import JSONResponse
@@ -24,12 +24,23 @@ router = APIRouter()
 
 
 @router.get("/qr/{quiz_pin}")
-async def get_qr(quiz_pin: str, dark_mode: bool = False):
+async def get_qr(quiz_pin: str, request: Request, dark_mode: bool = False):
     """
     Get QR code for quiz
     """
+    # Encode whatever address the host has in their browser bar rather than root_address, so a
+    # self-hosted server reached by an IP that changes with the network still hands out a link the
+    # phone can actually open. The reverse proxy sets both headers; root_address stays the fallback
+    # for a request that arrives without them.
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    if forwarded_host:
+        scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+        base_address = f"{scheme.split(',')[0].strip()}://{forwarded_host.split(',')[0].strip()}"
+    else:
+        base_address = settings.root_address
+
     qr = qrcode.QRCode(image_factory=qrcode.image.svg.SvgPathImage, version=1, box_size=20, border=0)
-    qr.add_data(f"{settings.root_address}/play?pin={quiz_pin}&ref=Qr")
+    qr.add_data(f"{base_address}/play?pin={quiz_pin}&ref=Qr")
     buf = io.BytesIO()
     qr.make(fit=True)
     qr.make_image(fill_color="black", back_color="white").save(buf, "SVG")
