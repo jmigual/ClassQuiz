@@ -17,7 +17,6 @@ SPDX-License-Identifier: MPL-2.0
 	const { t } = getLocalization();
 	let { quiz_id = $bindable() } = $props();
 	let captcha_selected = $state(false);
-	let selected_game_mode = $state('kahoot');
 	let loading = $state(false);
 	let custom_field = $state('');
 	let cqcs_enabled = $state(false);
@@ -43,14 +42,14 @@ SPDX-License-Identifier: MPL-2.0
 		const randomized_answers_parsed = randomized_answers ? 'True' : 'False';
 		if (captcha_enabled && captcha_selected) {
 			res = await fetch(
-				`/api/v1/quiz/start/${id}?captcha_enabled=True&game_mode=${selected_game_mode}&custom_field=${custom_field}&cqcs_enabled=${cqcs_enabled_parsed}`,
+				`/api/v1/quiz/start/${id}?captcha_enabled=True&game_mode=normal&custom_field=${custom_field}&cqcs_enabled=${cqcs_enabled_parsed}`,
 				{
 					method: 'POST'
 				}
 			);
 		} else {
 			res = await fetch(
-				`/api/v1/quiz/start/${id}?captcha_enabled=False&game_mode=${selected_game_mode}&custom_field=${custom_field}&cqcs_enabled=${cqcs_enabled_parsed}&randomize_answers=${randomized_answers_parsed}`,
+				`/api/v1/quiz/start/${id}?captcha_enabled=False&game_mode=normal&custom_field=${custom_field}&cqcs_enabled=${cqcs_enabled_parsed}&randomize_answers=${randomized_answers_parsed}`,
 				{
 					method: 'POST'
 				}
@@ -132,26 +131,8 @@ SPDX-License-Identifier: MPL-2.0
 			</div>
 		{/if}
 
-		<div class="grid grid-cols-2 gap-8 my-auto">
-			<div
-				class="rounded-lg bg-white shadow-lg cursor-pointer transition-all p-2"
-				class:opacity-50={selected_game_mode !== 'kahoot'}
-				onclick={() => {
-					selected_game_mode = 'kahoot';
-				}}
-			>
-				<h2 class="text-center text-2xl">{$t('words.normal')}</h2>
-				<p>
-					{$t('start_game.normal_mode_description')}
-				</p>
-			</div>
-			<div
-				class="rounded-lg bg-white shadow-lg cursor-pointer transition-all p-2"
-				class:opacity-50={selected_game_mode !== 'normal'}
-				onclick={() => {
-					selected_game_mode = 'normal';
-				}}
-			>
+		<div class="flex justify-center my-auto">
+			<div class="w-1/2 rounded-lg bg-white shadow-lg p-2">
 				<h2 class="text-center text-2xl">{$t('start_game.old_school_mode')}</h2>
 				<p>
 					{$t('start_game.old_school_mode_description')}
