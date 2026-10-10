@@ -25,13 +25,15 @@ SPDX-License-Identifier: MPL-2.0
 		game_mode: any;
 		question_index: string | number;
 		solution: any;
+		bg_color?: string;
 	}
 
 	let {
 		question = $bindable(),
 		game_mode = $bindable(),
 		question_index,
-		solution
+		solution,
+		bg_color
 	}: Props = $props();
 
 	if (question.type === undefined) {
@@ -151,7 +153,9 @@ SPDX-License-Identifier: MPL-2.0
 			style="height: {question.image ? '33.333333' : '16.666667'}%"
 		>
 			<h1
-				class="lg:text-2xl text-lg text-center text-black dark:text-white mt-2 break-normal mb-2"
+				class="lg:text-2xl text-lg text-center text-black {bg_color
+					? ''
+					: 'dark:text-white'} mt-2 break-normal mb-2"
 			>
 				{@html question.question}
 			</h1>
@@ -232,7 +236,7 @@ SPDX-License-Identifier: MPL-2.0
 					style="width: {(100 / parseInt(question.time)) * parseInt(timer_res)}vw"
 				></span>
 				<div class="flex justify-center mt-10">
-					<p class="text-black dark:text-white">Enter your answer</p>
+					<p class="text-black {bg_color ? '' : 'dark:text-white'}">Enter your answer</p>
 				</div>
 				<div class="flex justify-center m-2">
 					<input
