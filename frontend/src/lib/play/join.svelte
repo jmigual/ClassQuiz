@@ -224,10 +224,7 @@ SPDX-License-Identifier: MPL-2.0
 </svelte:head>
 
 <div class="fixed top-2 right-2 z-10">
-	<LanguageToggle
-		compact
-		onchange={(code) => (selected_language = quiz_languages.includes(code) ? code : '')}
-	/>
+	<LanguageToggle compact />
 </div>
 
 {#if game_pin === '' || game_pin.length < 6}

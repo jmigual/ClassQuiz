@@ -11,18 +11,15 @@ SPDX-License-Identifier: MPL-2.0
 	interface Props {
 		languages?: Language[];
 		compact?: boolean;
-		// eslint-disable-next-line no-unused-vars
-		onchange?: (code: string) => void;
 	}
 
-	let { languages = LANGUAGES, compact = false, onchange }: Props = $props();
+	let { languages = LANGUAGES, compact = false }: Props = $props();
 	const { currentLanguage } = getLocalization();
 
 	const set_language = (code: string): void => {
 		if (browser) {
 			localStorage.setItem('language', code);
 			currentLanguage.set(code);
-			onchange?.(code);
 		}
 	};
 </script>
