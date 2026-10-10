@@ -208,7 +208,7 @@ async def reset_password_with_token(reset_password: ResetPassword, response: Res
 @router.get(
     "/sessions/list",
     response_model=list[UserSession],
-    response_model_exclude={"user", "session_key", "quizs"},
+    response_model_exclude={"__all__": {"user", "session_key", "quizs"}},
 )
 async def list_sessions(user: User = Depends(get_current_user)):
     sessions = await UserSession.objects.filter(user=user).all()

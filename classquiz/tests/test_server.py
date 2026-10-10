@@ -142,6 +142,7 @@ class TestUsers:
         assert resp.status_code == 200
         data = resp.json()
         assert len(data) >= 1
+        assert "session_key" not in data[0]
 
     @pytest.mark.asyncio
     async def test_api_keys(self, test_client: TestClient):  # noqa : F811
