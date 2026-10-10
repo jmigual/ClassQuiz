@@ -324,8 +324,8 @@ async def set_question_number(sid: str, data: str):
     active_languages = await emit_per_player_language(game_pin, "set_question_number", payload_for)
 
     # The host needs its own emit plus the languages to stack the question in. Those come from the
-    # players just emitted to, not from the redis hash, so a kicked player (removed from the player
-    # set, but never from the hash) stops appearing on the shared screen.
+    # players just emitted to, not from the redis hash, so a kicked player stops appearing on the
+    # shared screen.
     await sio.emit(
         "set_question_number",
         {**payload_for(None), "languages": sorted(active_languages)},
@@ -465,6 +465,8 @@ async def kick_player(sid: str, data: dict):
         return
 
     player_sid = await redis.get(f"game_session:{session['game_pin']}:players:{data.username}")
+    if player_sid is None:
+        return
     await redis.srem(
         f"game_session:{session['game_pin']}:players",
         GamePlayer(username=data.username, sid=player_sid).model_dump_json(),
@@ -475,6 +477,8 @@ async def kick_player(sid: str, data: dict):
     await redis.hdel(f"game:{session['game_pin']}:players:custom_fields", data.username)
     await sio.leave_room(player_sid, session["game_pin"])
     await sio.emit("kick", room=player_sid)
+    # Ends the kicked socket's session so it can't keep acting as the player (submit_answer trusts it).
+    await sio.disconnect(player_sid)
 
 
 class _RegisterAsRemoteInput(BaseModel):
