@@ -88,8 +88,8 @@ async def set_answer(answers, game_pin: str, q_index: int, data: AnswerData) -> 
     return answers
 
 
-async def emit_per_player_language(game_pin: str, event: str, payload_for: Callable[[str | None], dict]) -> set[str]:
-    """Emit `event` to every player in the language they joined with, returning the languages present.
+async def emit_per_player_language(game_pin: str, event: str, payload_for: Callable[[str | None], dict]) -> None:
+    """Emit `event` to every player in the language they joined with.
 
     Question text is per-player now, so it can't go out as one broadcast to the game_pin room.
     `payload_for` is expected to memoize, so a room of 200 speaking three languages builds three
@@ -101,17 +101,13 @@ async def emit_per_player_language(game_pin: str, event: str, payload_for: Calla
     # Refreshed on every question, or a game running longer than the TTL would silently drop every
     # player back to the authored language mid-session.
     await redis.expire(languages_key, 7200)
-    active_languages = set()
     for raw_player in await redis.smembers(f"game_session:{game_pin}:players"):
         player = GamePlayer.model_validate_json(raw_player)
         # A box controller joins the player set with no sid; there is no socket to emit to.
         if player.sid is None:
             continue
         language = player_languages.get(player.username)
-        if language is not None:
-            active_languages.add(language)
         await sio.emit(event, payload_for(language), room=player.sid)
-    return active_languages
 
 
 @sio.event
@@ -321,16 +317,9 @@ async def set_question_number(sid: str, data: str):
             }
         return payloads[language]
 
-    active_languages = await emit_per_player_language(game_pin, "set_question_number", payload_for)
-
-    # The host needs its own emit plus the languages to stack the question in. Those come from the
-    # players just emitted to, not from the redis hash, so a kicked player stops appearing on the
-    # shared screen.
-    await sio.emit(
-        "set_question_number",
-        {**payload_for(None), "languages": sorted(active_languages)},
-        room=f"admin:{game_pin}",
-    )
+    await emit_per_player_language(game_pin, "set_question_number", payload_for)
+    # The host is not in the player set, so it gets the authored wording through its own emit.
+    await sio.emit("set_question_number", payload_for(None), room=f"admin:{game_pin}")
 
 
 @sio.event

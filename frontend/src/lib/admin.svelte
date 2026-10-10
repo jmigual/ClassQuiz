@@ -20,8 +20,6 @@ SPDX-License-Identifier: MPL-2.0
 
 	let final_results_clicked = $state(false);
 	let timer_interval: NodeJS.Timeout;
-	// Languages the players currently in the room chose, so the shared screen can show each of them.
-	let room_languages: string[] = $state([]);
 	let play_music = $state(false);
 	let audio_muted = $state(false);
 	let audio_volume = $state(100);
@@ -47,7 +45,6 @@ SPDX-License-Identifier: MPL-2.0
 		game_state.timer_res = game_state.quiz_data.questions[data.question_index].time;
 		game_state.selected_question = game_state.selected_question + 1;
 		game_state.answer_count = 0;
-		room_languages = data.languages ?? [];
 		play_music =
 			game_state.quiz_data.questions[data.question_index].type !== QuizQuestionType.SLIDE;
 
@@ -149,7 +146,6 @@ SPDX-License-Identifier: MPL-2.0
 				selected_question={game_state.selected_question}
 				timer_res={game_state.timer_res}
 				answer_count={game_state.answer_count}
-				{room_languages}
 			/>
 		{/if}
 	{/if}
