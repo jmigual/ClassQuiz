@@ -328,9 +328,12 @@ class PlayGame(BaseModel):
 
     def to_player_data(self, language: str | None = None) -> dict:
         translation = (self.translations or {}).get(language) if language else None
+        languages = self.available_languages()
         return (
             {
                 **json.loads(self.model_dump_json(exclude={"quiz_id", "questions", "user_id", "translations"})),
+                "languages": languages,
+                "language": language if language in languages else None,
                 "title": (translation and translation.title) or self.title,
                 "description": (translation and translation.description) or self.description,
                 "question_count": len(self.questions),

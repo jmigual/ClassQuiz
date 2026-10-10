@@ -175,6 +175,15 @@ def test_player_data_is_authored_without_a_translation():
         assert "translations" not in data
 
 
+def test_player_data_lists_the_quiz_languages_and_the_current_one():
+    game = play_game()
+    assert game.languages == []
+    data = game.to_player_data("es")[0]
+    assert data["languages"] == ["es"]
+    assert data["language"] == "es"
+    assert game.to_player_data("de")[0]["language"] is None
+
+
 def test_shuffled_answers_keep_their_translations(monkeypatch):
     # A rotation is not its own inverse, so applying the inverse permutation to the translations fails.
     monkeypatch.setattr(random, "shuffle", lambda items: items.append(items.pop(0)))
