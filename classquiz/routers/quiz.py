@@ -77,7 +77,10 @@ async def get_public_quiz(quiz_id: uuid.UUID):
 def shuffle_answers(question: dict) -> None:
     """Shuffle `question["answers"]` in place, permuting every translation's answers the same way,
     since a translation's entry i translates answers[i]. Short translations are padded with "" (the
-    "use the authored text" marker) so no entry ends up next to the wrong answer."""
+    "use the authored text" marker) so no entry ends up next to the wrong answer. RANGE and SLIDE have
+    nothing to shuffle, and ORDER is scored against the authored order, so those are left alone."""
+    if question["type"] in (QuizQuestionType.RANGE, QuizQuestionType.SLIDE, QuizQuestionType.ORDER):
+        return
     order = list(range(len(question["answers"])))
     random.shuffle(order)
     count = len(order)
@@ -119,10 +122,6 @@ async def start_quiz(
 
     if randomize_answers:
         for question in quiz.questions:
-            if question["type"] == QuizQuestionType.RANGE:
-                continue
-            if question["type"] == QuizQuestionType.SLIDE:
-                continue
             shuffle_answers(question)
 
     game = PlayGame(

@@ -220,3 +220,12 @@ def test_shuffle_tolerates_a_translation_without_answers():
     }
     shuffle_answers(question)
     assert question["translations"]["es"]["answers"] == ["", ""]
+
+
+def test_shuffle_leaves_order_questions_in_their_authored_order():
+    # check_order_question scores a submission against the stored answer order.
+    answers = [{"answer": "first"}, {"answer": "second"}, {"answer": "third"}]
+    question = {"question": "Sort these", "time": "20", "type": "ORDER", "answers": list(answers)}
+    for _ in range(20):
+        shuffle_answers(question)
+    assert question["answers"] == answers
