@@ -88,19 +88,33 @@ async def set_answer(answers, game_pin: str, q_index: int, data: AnswerData) -> 
     return answers
 
 
+async def snapshot_player_languages(game_pin: str) -> None:
+    """Freeze each player's language for the question that is about to go out.
+
+    Players can change language at any time, but a switch only applies from the next question: the
+    live question, its scoring and its solutions all read this copy rather than the preference hash.
+    """
+    languages_key = f"game:{game_pin}:players:languages"
+    copy_key = f"game:{game_pin}:players:question_languages"
+    player_languages = await redis.hgetall(languages_key)
+    # Refreshed on every question, or a game running longer than the TTL would silently drop every
+    # player back to the authored language mid-session.
+    await redis.expire(languages_key, 7200)
+    await redis.delete(copy_key)
+    if player_languages:
+        await redis.hset(copy_key, mapping=player_languages)
+        await redis.expire(copy_key, 7200)
+
+
 async def emit_per_player_language(game_pin: str, event: str, payload_for: Callable[[str | None], dict]) -> None:
-    """Emit `event` to every player in the language they joined with.
+    """Emit `event` to every player in the language their current question went out in.
 
     Question text is per-player now, so it can't go out as one broadcast to the game_pin room.
     `payload_for` is expected to memoize, so a room of 200 speaking three languages builds three
     payloads rather than two hundred. Callers must emit to `admin:{game_pin}` themselves — the host
     used to be covered by the game_pin broadcast and no longer is.
     """
-    languages_key = f"game:{game_pin}:players:languages"
-    player_languages = await redis.hgetall(languages_key)
-    # Refreshed on every question, or a game running longer than the TTL would silently drop every
-    # player back to the authored language mid-session.
-    await redis.expire(languages_key, 7200)
+    player_languages = await redis.hgetall(f"game:{game_pin}:players:question_languages")
     for raw_player in await redis.smembers(f"game_session:{game_pin}:players"):
         player = GamePlayer.model_validate_json(raw_player)
         # A box controller joins the player set with no sid; there is no socket to emit to.
@@ -137,19 +151,18 @@ async def rejoin_game(sid: str, data: dict):
         GamePlayer(username=data.username, sid=sid).model_dump_json(),
     )
     game_data = PlayGame.model_validate_json(redis_res)
+    language = await redis.hget(f"game:{data.game_pin}:players:languages", data.username)
     session = {
         "game_pin": data.game_pin,
         "username": data.username,
         "sid_custom": sid,
         "admin": False,
-        # Server-authoritative, so a reconnecting client can't switch language mid-game.
-        "language": await redis.hget(f"game:{data.game_pin}:players:languages", data.username),
     }
     await save_session(sid, sio, session)
     await sio.enter_room(sid, data.game_pin)
     await sio.emit(
         "rejoined_game",
-        game_data.to_player_data(session["language"]),
+        game_data.to_player_data(language),
         room=sid,
     )
 
@@ -185,7 +198,6 @@ async def join_game(sid: str, data: dict):
         "username": data.username,
         "sid_custom": sid,
         "admin": False,
-        "language": data.language,
     }
     await save_session(sid, sio, session)
     await sio.emit(
@@ -296,6 +308,7 @@ async def set_question_number(sid: str, data: str):
         )
         return
 
+    await snapshot_player_languages(game_pin)
     payloads: dict[str | None, dict] = {}
 
     def payload_for(language: str | None) -> dict:
@@ -349,8 +362,9 @@ async def submit_answer(sid: str, data: dict):
     # check_answer would otherwise miss on a translated answer — then store the authored
     # wording so results aggregate across languages.
     base_question = game_data.questions[question_index]
-    answer_right, answer = check_answer(base_question.localized(session.get("language")), data)
-    answer = base_question.authored_answer(session.get("language"), answer)
+    language = await redis.hget(f"game:{session['game_pin']}:players:question_languages", session["username"])
+    answer_right, answer = check_answer(base_question.localized(language), data)
+    answer = base_question.authored_answer(language, answer)
     latency = int(float(session["ping"]))
     time_q_started = datetime.fromisoformat(await redis.get(f"game:{session['game_pin']}:current_time"))
     diff = (time_q_started - now).total_seconds() * 1000  # - timedelta(milliseconds=latency)
