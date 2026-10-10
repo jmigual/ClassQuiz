@@ -7,13 +7,22 @@
 taken when each question goes out, and is what emits and scoring read.
 """
 
+import random
 from datetime import datetime
 from unittest.mock import AsyncMock
 
 import pytest
 
 from classquiz import socket_server
-from classquiz.db.models import GamePlayer, PlayGame, QuizTranslation
+from classquiz.db.models import (
+    GamePlayer,
+    PlayGame,
+    QuestionTranslation,
+    QuizQuestion,
+    QuizQuestionType,
+    QuizTranslation,
+    VotingQuizAnswer,
+)
 from classquiz.routers import live
 from classquiz.tests.test_translations import play_game
 
@@ -237,3 +246,42 @@ async def test_joining_without_a_language_clears_a_stale_preference(mocks, monke
 
     redis.hdel.assert_awaited_once_with(LANGUAGES_KEY, "alice")
     redis.hset.assert_not_awaited()
+
+
+def order_question() -> QuizQuestion:
+    return QuizQuestion(
+        question="Sort them",
+        time="20",
+        type=QuizQuestionType.ORDER,
+        answers=[VotingQuizAnswer(answer=f"a{i}") for i in range(6)],
+        translations={"es": QuestionTranslation(question="Ordénalos", answers=[f"b{i}" for i in range(6)])},
+    )
+
+
+def authored_order(question, language):
+    payload = socket_server.player_question(PIN, 0, question, language)
+    return [int(a["answer"][1:]) for a in payload["question"]["answers"]]
+
+
+def test_order_shuffle_is_the_same_in_every_language():
+    question = order_question()
+    assert authored_order(question, "es") == authored_order(question, None) == authored_order(question, "es")
+    assert authored_order(question, None) != list(range(6))
+    assert socket_server.player_question(PIN, 0, question, "es")["language"] == "es"
+
+
+def test_order_shuffle_cannot_be_recomputed_from_public_values(monkeypatch):
+    # The authored order is the solution, so a player who knows the pin and the question number must
+    # not be able to rebuild the permutation and invert it.
+    question = order_question()
+    public_seed = list(range(6))
+    random.Random(f"{PIN}:0").shuffle(public_seed)
+
+    # Fixed secrets, checked not to collide with the public permutation or each other, so the
+    # outcome does not depend on the environment's secret_key.
+    monkeypatch.setattr(socket_server.settings, "secret_key", "secret-a")
+    shown = authored_order(question, None)
+    assert shown != public_seed
+
+    monkeypatch.setattr(socket_server.settings, "secret_key", "secret-b")
+    assert authored_order(question, None) not in (shown, public_seed)

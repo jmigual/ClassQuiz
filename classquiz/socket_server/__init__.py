@@ -16,6 +16,7 @@ from cryptography.fernet import Fernet
 from classquiz.config import redis, settings
 from classquiz.db.models import (
     PlayGame,
+    QuizQuestion,
     QuizQuestionType,
     GameSession,
     GamePlayer,
@@ -105,6 +106,30 @@ async def snapshot_player_languages(game_pin: str) -> None:
     if player_languages:
         await redis.hset(copy_key, mapping=player_languages)
         await redis.expire(copy_key, 7200)
+
+
+def player_question(game_pin: str, question_index: int, base_question: QuizQuestion, language: str | None) -> dict:
+    """The `set_question_number` payload a player gets for `base_question` in `language`.
+
+    The ORDER shuffle is seeded by game and question, so every language (and every later language
+    switch) shows the same permutation and the client can map answers by position. The seed includes
+    the server secret: the authored order is the solution, and a seed built from public values would
+    let a player recompute the permutation and invert it.
+    """
+    question = base_question.localized(language)
+    temp_return = question.model_dump(exclude={"translations"})
+    if question.type == QuizQuestionType.VOTING:
+        for i in range(len(temp_return["answers"])):
+            temp_return["answers"][i] = VotingQuizAnswer(**temp_return["answers"][i])
+    temp_return["type"] = question.type
+    if temp_return["type"] == QuizQuestionType.ORDER:
+        random.Random(f"{settings.secret_key}:{game_pin}:{question_index}").shuffle(temp_return["answers"])
+    return {
+        "question_index": question_index,
+        "language": language,
+        # Never ship the other languages to a player's device.
+        "question": ReturnQuestion(**temp_return).model_dump(exclude={"translations"}),
+    }
 
 
 async def emit_per_player_language(game_pin: str, event: str, payload_for: Callable[[str | None], dict]) -> None:
@@ -348,19 +373,7 @@ async def set_question_number(sid: str, data: str):
         # Cache by language, not by player: 200 people speaking three languages build three
         # payloads, not two hundred.
         if language not in payloads:
-            question = base_question.localized(language)
-            temp_return = question.model_dump(exclude={"translations"})
-            if question.type == QuizQuestionType.VOTING:
-                for i in range(len(temp_return["answers"])):
-                    temp_return["answers"][i] = VotingQuizAnswer(**temp_return["answers"][i])
-            temp_return["type"] = question.type
-            if temp_return["type"] == QuizQuestionType.ORDER:
-                random.shuffle(temp_return["answers"])
-            payloads[language] = {
-                "question_index": question_index,
-                # Never ship the other languages to a player's device.
-                "question": ReturnQuestion(**temp_return).model_dump(exclude={"translations"}),
-            }
+            payloads[language] = player_question(game_pin, question_index, base_question, language)
         return payloads[language]
 
     await emit_per_player_language(game_pin, "set_question_number", payload_for)

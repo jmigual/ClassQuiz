@@ -23,7 +23,7 @@ from classquiz.db.models import (
     AnswerDataList,
 )
 from classquiz.auth import check_api_key
-from classquiz.socket_server import ReturnQuestion, emit_per_player_language, sio, snapshot_player_languages
+from classquiz.socket_server import emit_per_player_language, player_question, sio, snapshot_player_languages
 
 settings = settings()
 
@@ -202,13 +202,7 @@ async def set_next_question(game_pin: str, question_number: int, api_key: str):
 
     def payload_for(language: str | None) -> dict:
         if language not in payloads:
-            question = base_question.localized(language)
-            payloads[language] = {
-                "question_index": question_number,
-                "question": ReturnQuestion(**question.model_dump(exclude={"translations"})).model_dump(
-                    exclude={"translations"}
-                ),
-            }
+            payloads[language] = player_question(game_pin, question_number, base_question, language)
         return payloads[language]
 
     # Same per-player fanout as the socket handler: this endpoint is a second way to advance a
