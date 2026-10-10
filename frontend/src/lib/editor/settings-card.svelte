@@ -36,12 +36,23 @@ SPDX-License-Identifier: MPL-2.0
 		new_language = '';
 	};
 
+	const strip_html = (text: string): string => text.replace(/<[^>]*>/g, '');
+
+	const set_translation = (language: string, field: 'title' | 'description', value: string) => {
+		((data.translations ??= {})[language] ??= { title: '', description: '' })[field] = value;
+	};
+
 	const remove_language = (name: string) => {
-		if (!confirm(`Remove "${name}"? This deletes its translations from every question.`)) {
+		if (
+			!confirm(
+				`Remove "${name}"? This deletes its translations from every question and from the quiz title and description.`
+			)
+		) {
 			return;
 		}
 		data.languages = (data.languages ?? []).filter((l) => l !== name);
 		data.questions.forEach((q) => delete q.translations?.[name]);
+		delete data.translations?.[name];
 	};
 
 	let custom_bg_color = $state(Boolean(data.background_color));
@@ -275,6 +286,33 @@ SPDX-License-Identifier: MPL-2.0
 						>{$t('editor.add_language')}</button
 					>
 				</div>
+				{#each language_list as language (language)}
+					<div class="flex flex-col gap-2 w-1/3">
+						<h4>{language}</h4>
+						<input
+							type="text"
+							aria-label="Title ({language})"
+							value={data.translations?.[language]?.title ?? ''}
+							oninput={(e) =>
+								set_translation(language, 'title', e.currentTarget.value)}
+							placeholder={$t('editor.translate_placeholder', {
+								text: strip_html(data.title)
+							})}
+							class="w-full rounded-lg border-2 border-gray-500 bg-transparent p-2 outline-hidden focus:border-blue-500 focus:shadow-2xl"
+						/>
+						<textarea
+							maxlength="500"
+							aria-label="Description ({language})"
+							value={data.translations?.[language]?.description ?? ''}
+							oninput={(e) =>
+								set_translation(language, 'description', e.currentTarget.value)}
+							placeholder={$t('editor.translate_placeholder', {
+								text: strip_html(data.description)
+							})}
+							class="w-full h-20 resize-none rounded-lg border-2 border-gray-500 bg-transparent p-2 outline-hidden focus:border-blue-500 focus:shadow-2xl"
+						></textarea>
+					</div>
+				{/each}
 			</div>
 		</div>
 	</div>

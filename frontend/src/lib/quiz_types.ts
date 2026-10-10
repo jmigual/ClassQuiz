@@ -10,6 +10,11 @@ export enum ElementTypes {
 	Circle = 'CIRCLE' // eslint-disable-line no-unused-vars
 }
 
+export interface QuizTranslation {
+	title: string;
+	description: string;
+}
+
 export interface QuizData {
 	title: string;
 	description: string;
@@ -27,6 +32,7 @@ export interface QuizData {
 	views: number;
 	languages?: string[];
 	original_language?: string | null;
+	translations?: Record<string, QuizTranslation> | null;
 }
 
 export enum QuizQuestionType {
@@ -99,6 +105,7 @@ export interface EditorData {
 	background_image?: string;
 	languages?: string[];
 	original_language?: string | null;
+	translations?: Record<string, QuizTranslation> | null;
 }
 
 export interface PrivateImageData {
