@@ -28,6 +28,8 @@ SPDX-License-Identifier: MPL-2.0
 		bg_color?: string;
 		// Language the question on screen is worded in; the server scores the answer against it.
 		language?: string | null;
+		// Leave the top strip free for the language picker.
+		reserve_top?: boolean;
 	}
 
 	let {
@@ -36,7 +38,8 @@ SPDX-License-Identifier: MPL-2.0
 		question_index,
 		solution,
 		bg_color,
-		language
+		language,
+		reserve_top = false
 	}: Props = $props();
 
 	if (question.type === undefined) {
@@ -150,7 +153,7 @@ SPDX-License-Identifier: MPL-2.0
 	};
 </script>
 
-<div class="h-dvh w-screen">
+<div class="h-dvh w-screen" class:pt-10={reserve_top}>
 	{#if game_mode === 'normal'}
 		<div
 			class="flex flex-col justify-start"
@@ -218,7 +221,7 @@ SPDX-License-Identifier: MPL-2.0
 			</div>
 		{:else if question.type === QuizQuestionType.RANGE}
 			<span
-				class="fixed top-0 bg-[#1368CE] h-8 transition-all"
+				class="fixed {reserve_top ? 'top-10' : 'top-0'} bg-[#1368CE] h-8 transition-all"
 				style="width: {(100 / parseInt(question.time)) * parseInt(timer_res)}vw"
 			></span>
 			{#await import('svelte-range-slider-pips')}
@@ -246,7 +249,7 @@ SPDX-License-Identifier: MPL-2.0
 		{:else if question.type === QuizQuestionType.TEXT}
 			<div>
 				<span
-					class="fixed top-0 bg-[#1368CE] h-8 transition-all"
+					class="fixed {reserve_top ? 'top-10' : 'top-0'} bg-[#1368CE] h-8 transition-all"
 					style="width: {(100 / parseInt(question.time)) * parseInt(timer_res)}vw"
 				></span>
 				<div class="flex justify-center mt-10">
@@ -280,7 +283,7 @@ SPDX-License-Identifier: MPL-2.0
                             <Spinner />
                         {:else}-->
 			<span
-				class="fixed top-0 bg-[#1368CE] h-8 transition-all"
+				class="fixed {reserve_top ? 'top-10' : 'top-0'} bg-[#1368CE] h-8 transition-all"
 				style="width: {(100 / parseInt(question.time)) * parseInt(timer_res)}vw"
 			></span>
 			<div class="flex flex-col w-full h-full gap-4 px-4 py-6 mt-10">
