@@ -144,6 +144,19 @@ class TestUsers:
         assert len(data) >= 1
 
     @pytest.mark.asyncio
+    async def test_api_keys(self, test_client: TestClient):  # noqa : F811
+        resp = test_client.post("/api/v1/users/api_keys", cookies=ValueStorage.cookies)
+        assert resp.status_code == 200
+        key = resp.json()["key"]
+        resp = test_client.get("/api/v1/users/api_keys", cookies=ValueStorage.cookies)
+        assert resp.status_code == 200
+        assert {"key": key} in resp.json()
+        resp = test_client.delete(f"/api/v1/users/api_keys?api_key={key}", cookies=ValueStorage.cookies)
+        assert resp.status_code == 200
+        resp = test_client.get("/api/v1/users/api_keys", cookies=ValueStorage.cookies)
+        assert {"key": key} not in resp.json()
+
+    @pytest.mark.asyncio
     async def test_delete_session(self, test_client: TestClient):  # noqa : F811
         resp = test_client.get("/api/v1/users/session", cookies=ValueStorage.cookies)
         session_id = resp.json()["id"]

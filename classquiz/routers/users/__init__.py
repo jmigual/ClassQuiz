@@ -289,7 +289,8 @@ async def generate_api_key(user: User = Depends(get_current_user)):
     return key.model_dump(include={"key"})
 
 
-@router.get("/api_keys", response_model=list[ApiKey], response_model_include={"key"})
+# On a list, pydantic v2 reads a bare include set as item indices; "__all__" targets every item's fields.
+@router.get("/api_keys", response_model=list[ApiKey], response_model_include={"__all__": {"key"}})
 async def list_api_keys(user: User = Depends(get_current_user)):
     keys = await ApiKey.objects.filter(user=user).all()
     return keys
