@@ -326,10 +326,13 @@ class PlayGame(BaseModel):
             found.update((question.translations or {}).keys())
         return sorted(found)
 
-    def to_player_data(self) -> dict:
+    def to_player_data(self, language: str | None = None) -> dict:
+        translation = (self.translations or {}).get(language) if language else None
         return (
             {
-                **json.loads(self.model_dump_json(exclude={"quiz_id", "questions", "user_id"})),
+                **json.loads(self.model_dump_json(exclude={"quiz_id", "questions", "user_id", "translations"})),
+                "title": (translation and translation.title) or self.title,
+                "description": (translation and translation.description) or self.description,
                 "question_count": len(self.questions),
             },
         )

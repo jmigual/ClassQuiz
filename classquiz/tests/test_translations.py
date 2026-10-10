@@ -15,6 +15,7 @@ from classquiz.db.models import (
     QuestionTranslation,
     QuizQuestion,
     QuizQuestionType,
+    QuizTranslation,
     TextQuizAnswer,
 )
 from classquiz.socket_server.helpers import check_answer
@@ -146,3 +147,27 @@ def test_available_languages_is_empty_with_neither():
     )
     game = play_game(languages=[], questions=[question])
     assert game.available_languages() == []
+
+
+def test_player_data_uses_the_players_language():
+    game = play_game(description="Bye", translations={"es": QuizTranslation(title="Hola", description="Adéu")})
+    data = game.to_player_data("es")[0]
+    assert data["title"] == "Hola"
+    assert data["description"] == "Adéu"
+    assert "translations" not in data
+
+
+def test_player_data_falls_back_field_by_field():
+    game = play_game(description="Bye", translations={"es": QuizTranslation(title="Hola")})
+    data = game.to_player_data("es")[0]
+    assert data["title"] == "Hola"
+    assert data["description"] == "Bye"
+
+
+def test_player_data_is_authored_without_a_translation():
+    game = play_game(description="Bye", translations={"es": QuizTranslation(title="Hola", description="Adéu")})
+    for language in (None, "fr"):
+        data = game.to_player_data(language)[0]
+        assert data["title"] == "quiz"
+        assert data["description"] == "Bye"
+        assert "translations" not in data

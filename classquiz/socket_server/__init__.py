@@ -153,7 +153,7 @@ async def rejoin_game(sid: str, data: dict):
     await sio.enter_room(sid, data.game_pin)
     await sio.emit(
         "rejoined_game",
-        game_data.to_player_data(),
+        game_data.to_player_data(session["language"]),
         room=sid,
     )
 
@@ -194,7 +194,7 @@ async def join_game(sid: str, data: dict):
     await save_session(sid, sio, session)
     await sio.emit(
         "joined_game",
-        game_data.to_player_data(),
+        game_data.to_player_data(data.language),
         room=sid,
     )
     await redis.set(f"game_session:{data.game_pin}:players:{data.username}", sid, ex=7200)
