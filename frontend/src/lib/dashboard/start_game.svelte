@@ -20,7 +20,7 @@ SPDX-License-Identifier: MPL-2.0
 	let loading = $state(false);
 	let custom_field = $state('');
 	let cqcs_enabled = $state(false);
-	let randomized_answers = $state(false);
+	let randomized_answers = $state(true);
 
 	const tippy = createTippy({
 		arrow: true,
