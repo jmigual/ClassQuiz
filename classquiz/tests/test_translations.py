@@ -7,6 +7,7 @@ Answers travel back to the server as strings, so showing a player a translated a
 checking it against the authored one silently marks every correct answer wrong. These cover that.
 """
 
+import random
 import uuid
 
 from classquiz.db.models import (
@@ -18,6 +19,7 @@ from classquiz.db.models import (
     QuizTranslation,
     TextQuizAnswer,
 )
+from classquiz.routers.quiz import shuffle_answers
 from classquiz.socket_server.helpers import check_answer
 from classquiz.socket_server.models import SubmitAnswerData
 
@@ -171,3 +173,50 @@ def test_player_data_is_authored_without_a_translation():
         assert data["title"] == "quiz"
         assert data["description"] == "Bye"
         assert "translations" not in data
+
+
+def test_shuffled_answers_keep_their_translations(monkeypatch):
+    # A rotation is not its own inverse, so applying the inverse permutation to the translations fails.
+    monkeypatch.setattr(random, "shuffle", lambda items: items.append(items.pop(0)))
+    question = {
+        "question": "Pick one",
+        "time": "20",
+        "type": "ABCD",
+        "answers": [
+            {"right": False, "answer": "one"},
+            {"right": True, "answer": "two"},
+            {"right": False, "answer": "three"},
+        ],
+        "translations": {
+            "es": {"question": "Elige", "answers": ["uno", "dos", "tres"]},
+            # Shorter than the answers: the missing entry means "use the authored text".
+            "ca": {"question": "Tria", "answers": ["un", "dos"]},
+        },
+    }
+    shuffle_answers(question)
+    assert [a["answer"] for a in question["answers"]] == ["two", "three", "one"]
+    assert question["translations"]["es"]["answers"] == ["dos", "tres", "uno"]
+    assert question["translations"]["ca"]["answers"] == ["dos", "", "un"]
+
+    shuffled = QuizQuestion(**question)
+    assert shuffled.authored_answer("es", "dos") == "two"
+    assert shuffled.authored_answer("es", "uno") == "one"
+    assert shuffled.authored_answer("ca", "un") == "one"
+    assert [(a.answer, a.right) for a in shuffled.localized("es").answers] == [
+        ("dos", True),
+        ("tres", False),
+        ("uno", False),
+    ]
+    assert [a.answer for a in shuffled.localized("ca").answers] == ["dos", "three", "un"]
+
+
+def test_shuffle_tolerates_a_translation_without_answers():
+    question = {
+        "question": "Pick one",
+        "time": "20",
+        "type": "ABCD",
+        "answers": [{"right": True, "answer": "one"}, {"right": False, "answer": "two"}],
+        "translations": {"es": {"question": "Elige"}},
+    }
+    shuffle_answers(question)
+    assert question["translations"]["es"]["answers"] == ["", ""]

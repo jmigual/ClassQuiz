@@ -74,6 +74,20 @@ async def get_public_quiz(quiz_id: uuid.UUID):
         return PublicQuizResponse(**quiz.model_dump())
 
 
+def shuffle_answers(question: dict) -> None:
+    """Shuffle `question["answers"]` in place, permuting every translation's answers the same way,
+    since a translation's entry i translates answers[i]. Short translations are padded with "" (the
+    "use the authored text" marker) so no entry ends up next to the wrong answer."""
+    order = list(range(len(question["answers"])))
+    random.shuffle(order)
+    count = len(order)
+    question["answers"] = [question["answers"][i] for i in order]
+    for translation in (question.get("translations") or {}).values():
+        translated = translation.get("answers") or []
+        padded = translated + [""] * (count - len(translated))
+        translation["answers"] = [padded[i] for i in order]
+
+
 @router.post("/start/{quiz_id}")
 async def start_quiz(
     quiz_id: str,
@@ -109,7 +123,7 @@ async def start_quiz(
                 continue
             if question["type"] == QuizQuestionType.SLIDE:
                 continue
-            random.shuffle(question["answers"])
+            shuffle_answers(question)
 
     game = PlayGame(
         quiz_id=quiz_id,
