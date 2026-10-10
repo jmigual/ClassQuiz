@@ -34,6 +34,7 @@ from classquiz.socket_server.helpers import (
 from .models import (
     RejoinGameData,
     JoinGameData,
+    SetLanguageData,
     ReturnQuestion,
     SubmitAnswerData,
     RegisterAsAdminData,
@@ -221,6 +222,10 @@ async def join_game(sid: str, data: dict):
         languages_key = f"game:{data.game_pin}:players:languages"
         await redis.hset(languages_key, data.username, data.language)
         await redis.expire(languages_key, 7200)
+    else:
+        # A set_language racing a kick can leave a preference behind for the freed name; a join with
+        # no language must start from the authored wording, not inherit it.
+        await redis.hdel(f"game:{data.game_pin}:players:languages", data.username)
 
     await sio.emit(
         "player_joined",
@@ -232,6 +237,34 @@ async def join_game(sid: str, data: dict):
     await sio.emit("time_sync", encrypted_datetime, room=sid)
     # --- Time-Sync ---
     await sio.enter_room(sid, data.game_pin)
+
+
+@sio.event
+async def set_language(sid: str, data: dict):
+    try:
+        data = SetLanguageData(**data)
+    except ValidationError as e:
+        await sio.emit("error", room=sid)
+        print(e)
+        return
+    session = await get_session(sid, sio)
+    game_pin = session.get("game_pin")
+    username = session.get("username")
+    if session.get("admin") or game_pin is None or username is None:
+        return
+    # A kick frees the name for someone else, and a socket that never owned it must not edit it.
+    if await redis.get(f"game_session:{game_pin}:players:{username}") != sid:
+        return
+    game = await PlayGame.get_from_redis(game_pin)
+    languages_key = f"game:{game_pin}:players:languages"
+    language = data.language if data.language in game.available_languages() else None
+    if language is None:
+        # Not offered (this includes the authored language): the player gets the authored wording.
+        await redis.hdel(languages_key, username)
+    else:
+        await redis.hset(languages_key, username, language)
+        await redis.expire(languages_key, 7200)
+    return game.to_player_data(language)
 
 
 @sio.event

@@ -155,3 +155,85 @@ async def test_question_start_copies_player_languages(mocks, monkeypatch):
 
     redis.delete.assert_awaited_once_with(COPY_KEY)
     redis.hset.assert_not_awaited()
+
+
+def player_session(monkeypatch, **overrides):
+    session = {"admin": False, "game_pin": PIN, "username": "alice", **overrides}
+    monkeypatch.setattr(socket_server, "get_session", AsyncMock(return_value=session))
+
+
+@pytest.mark.asyncio
+async def test_switch_updates_the_players_language(mocks, monkeypatch):
+    redis, _sio, game = mocks
+    player_session(monkeypatch)
+    redis.get.return_value = ALICE_SID
+
+    result = await socket_server.set_language(ALICE_SID, {"language": "es"})
+
+    redis.hset.assert_awaited_once_with(LANGUAGES_KEY, "alice", "es")
+    assert result == game.to_player_data("es") != game.to_player_data(None)
+
+
+@pytest.mark.asyncio
+async def test_switch_to_a_language_the_quiz_does_not_offer_falls_back_to_the_original(mocks, monkeypatch):
+    redis, _sio, game = mocks
+    player_session(monkeypatch)
+    redis.get.return_value = ALICE_SID
+
+    result = await socket_server.set_language(ALICE_SID, {"language": "de"})
+
+    redis.hdel.assert_awaited_once_with(LANGUAGES_KEY, "alice")
+    redis.hset.assert_not_awaited()
+    assert result == game.to_player_data(None) != game.to_player_data("es")
+
+
+@pytest.mark.asyncio
+async def test_switch_from_a_socket_that_no_longer_owns_the_name_is_ignored(mocks, monkeypatch):
+    redis, _sio, _game = mocks
+    player_session(monkeypatch)
+    redis.get.return_value = None
+
+    assert await socket_server.set_language(ALICE_SID, {"language": "es"}) is None
+
+    redis.hset.assert_not_awaited()
+    redis.hdel.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_switch_from_an_admin_session_is_ignored(mocks, monkeypatch):
+    redis, _sio, _game = mocks
+    player_session(monkeypatch, admin=True)
+    redis.get.return_value = ALICE_SID
+
+    assert await socket_server.set_language(ALICE_SID, {"language": "es"}) is None
+
+    redis.hset.assert_not_awaited()
+    redis.hdel.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_switch_from_a_socket_that_never_joined_is_ignored(mocks, monkeypatch):
+    redis, _sio, _game = mocks
+    monkeypatch.setattr(socket_server, "get_session", AsyncMock(return_value={"session_id": "abc"}))
+
+    assert await socket_server.set_language(ALICE_SID, {"language": "es"}) is None
+
+    redis.hset.assert_not_awaited()
+    redis.hdel.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_joining_without_a_language_clears_a_stale_preference(mocks, monkeypatch):
+    redis, _sio, game = mocks
+
+    async def get(key):
+        return game.model_dump_json() if key == f"game:{PIN}" else None
+
+    redis.get.side_effect = get
+    monkeypatch.setattr(socket_server, "save_session", AsyncMock())
+    monkeypatch.setattr(GamePlayer, "to_player_stack", AsyncMock())
+
+    await socket_server.join_game(ALICE_SID, {"game_pin": PIN, "username": "alice"})
+
+    redis.hdel.assert_awaited_once_with(LANGUAGES_KEY, "alice")
+    redis.hset.assert_not_awaited()

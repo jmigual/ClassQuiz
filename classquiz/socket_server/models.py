@@ -20,6 +20,10 @@ class RejoinGameData(BaseModel):
     username: str
 
 
+class SetLanguageData(BaseModel):
+    language: str
+
+
 class RegisterAsAdminData(BaseModel):
     game_pin: str
     game_id: str
