@@ -162,10 +162,41 @@ async def test_switch_updates_the_players_language(mocks, monkeypatch):
     player_session(monkeypatch)
     redis.get.return_value = ALICE_SID
 
-    result = await socket_server.set_language(ALICE_SID, {"language": "es"})
+    data, _question = await socket_server.set_language(ALICE_SID, {"language": "es"})
 
     redis.hset.assert_awaited_once_with(LANGUAGES_KEY, "alice", "es")
-    assert result == game.to_player_data("es") != game.to_player_data(None)
+    assert (data,) == game.to_player_data("es") != game.to_player_data(None)
+
+
+@pytest.mark.asyncio
+async def test_switch_mid_question_replies_with_the_question_in_the_new_language(mocks, monkeypatch):
+    redis, _sio, _game = mocks
+    player_session(monkeypatch)
+    redis.get.return_value = ALICE_SID
+
+    _data, question = await socket_server.set_language(ALICE_SID, {"language": "es"})
+
+    assert question["language"] == "es"
+    assert question["question_index"] == 0
+    assert question["question"]["question"] == "¿Cuánto es 2+2?"
+    # The clock keeps running: a switch must not restart the question.
+    redis.set.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("current_question", [-1, "slide"])
+async def test_switch_outside_a_question_replies_without_one(mocks, monkeypatch, current_question):
+    redis, _sio, game = mocks
+    player_session(monkeypatch)
+    redis.get.return_value = ALICE_SID
+    if current_question == "slide":
+        game.questions = [QuizQuestion(question="Intro", time="20", type=QuizQuestionType.SLIDE, answers="<p>hi</p>")]
+        current_question = 0
+    game.current_question = current_question
+
+    _data, question = await socket_server.set_language(ALICE_SID, {"language": "es"})
+
+    assert question is None
 
 
 @pytest.mark.asyncio
@@ -174,11 +205,11 @@ async def test_switch_to_a_language_the_quiz_does_not_offer_falls_back_to_the_or
     player_session(monkeypatch)
     redis.get.return_value = ALICE_SID
 
-    result = await socket_server.set_language(ALICE_SID, {"language": "de"})
+    data, _question = await socket_server.set_language(ALICE_SID, {"language": "de"})
 
     redis.hdel.assert_awaited_once_with(LANGUAGES_KEY, "alice")
     redis.hset.assert_not_awaited()
-    assert result == game.to_player_data(None) != game.to_player_data("es")
+    assert (data,) == game.to_player_data(None) != game.to_player_data("es")
 
 
 @pytest.mark.asyncio

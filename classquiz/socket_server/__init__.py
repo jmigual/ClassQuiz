@@ -275,7 +275,13 @@ async def set_language(sid: str, data: dict):
     else:
         await redis.hset(languages_key, username, language)
         await redis.expire(languages_key, 7200)
-    return game.to_player_data(language)
+    # The question on screen, reworded; the client swaps it in place so the timer and any pick keep
+    # going. Slides have no player payload (ReturnQuestion cannot hold their string answer).
+    question = None
+    index = game.current_question
+    if index >= 0 and game.questions[index].type != QuizQuestionType.SLIDE:
+        question = player_question(game_pin, index, game.questions[index], language)
+    return game.to_player_data(language) + (question,)
 
 
 @sio.event
