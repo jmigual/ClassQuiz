@@ -165,7 +165,7 @@ SPDX-License-Identifier: MPL-2.0
 	<title>ClassQuiz - Play</title>
 </svelte:head>
 <div
-	class="min-h-screen min-w-full"
+	class="min-h-dvh min-w-full"
 	style="background: {bg_color ? bg_color : 'transparent'}"
 	class:text-black={bg_color}
 >
