@@ -42,7 +42,7 @@ SPDX-License-Identifier: MPL-2.0
 	};
 </script>
 
-<div class="w-full h-[95%]">
+<div class="w-full flex-1 min-h-0">
 	<!--
         <div
             class="absolute top-0 bottom-0 left-0 right-0 m-auto rounded-full h-fit w-fit border-2 border-black shadow-2xl z-50"
@@ -60,7 +60,7 @@ SPDX-License-Identifier: MPL-2.0
 		<CircularTimer text={timer_res} progress={circular_progress} color="#1368CE" />
 	</div>
 
-	<div class="grid grid-rows-2 grid-flow-col auto-cols-auto gap-2 w-full p-4 h-full">
+	<div class="grid grid-rows-2 grid-flow-col auto-cols-fr gap-2 w-full p-4 h-full">
 		{#each question.answers as answer, i}
 			<button
 				class="rounded-lg h-full flex align-middle justify-center disabled:opacity-60 p-3 border-2 border-black transition-all"
@@ -75,7 +75,7 @@ SPDX-License-Identifier: MPL-2.0
 				{#if game_mode === 'kahoot'}
 					<img class="h-2/3 inline-block m-auto" alt="Icon" src={kahoot_icons[i]} />
 				{:else}
-					<p class="m-auto">{answer.answer}</p>
+					<p class="m-auto break-words min-w-0">{answer.answer}</p>
 				{/if}
 			</button>
 		{/each}

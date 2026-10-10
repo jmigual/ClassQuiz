@@ -149,6 +149,11 @@ SPDX-License-Identifier: MPL-2.0
 	{#if game_mode === 'normal'}
 		<div
 			class="flex flex-col justify-start"
+			class:box-content={[
+				QuizQuestionType.RANGE,
+				QuizQuestionType.ORDER,
+				QuizQuestionType.TEXT
+			].includes(question.type)}
 			class:pt-10={[
 				QuizQuestionType.RANGE,
 				QuizQuestionType.ORDER,
@@ -182,9 +187,7 @@ SPDX-License-Identifier: MPL-2.0
 					<CircularTimer text={timer_res} progress={circular_progress} color="#1368CE" />
 				</div>
 
-				<div
-					class="grid grid-rows-[repeat(2,minmax(0,1fr))] grid-flow-col auto-cols-fr gap-2 w-full p-4 h-full"
-				>
+				<div class="grid grid-rows-2 grid-flow-col auto-cols-fr gap-2 w-full p-4 h-full">
 					{#each question.answers as answer, i}
 						<button
 							class="rounded-lg h-full flex align-middle justify-center disabled:opacity-60 p-3 border-2 border-black"
@@ -353,21 +356,23 @@ SPDX-License-Identifier: MPL-2.0
 			{#await import('./questions/check.svelte')}
 				<Spinner />
 			{:then c}
-				<c.default
-					{question}
-					bind:selected_answer
-					{game_mode}
-					{timer_res}
-					{circular_progress}
-				/>
-				<div class="flex justify-center h-[5%]">
-					<div class="w-1/2">
-						<BrownButton
-							type="button"
-							disabled={selected_answer === undefined}
-							onclick={() => selectAnswer(selected_answer)}
-							>{$t('words.submit')}
-						</BrownButton>
+				<div class="flex flex-col" style="height: {get_div_height()}%">
+					<c.default
+						{question}
+						bind:selected_answer
+						{game_mode}
+						{timer_res}
+						{circular_progress}
+					/>
+					<div class="flex justify-center shrink-0">
+						<div class="w-1/2">
+							<BrownButton
+								type="button"
+								disabled={selected_answer === undefined}
+								onclick={() => selectAnswer(selected_answer)}
+								>{$t('words.submit')}
+							</BrownButton>
+						</div>
 					</div>
 				</div>
 			{/await}
