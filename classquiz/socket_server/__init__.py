@@ -469,6 +469,10 @@ async def kick_player(sid: str, data: dict):
         f"game_session:{session['game_pin']}:players",
         GamePlayer(username=data.username, sid=player_sid).model_dump_json(),
     )
+    # Free the name for a new join and make the old sid fail rejoin_game's sid check.
+    await redis.delete(f"game_session:{session['game_pin']}:players:{data.username}")
+    await redis.hdel(f"game:{session['game_pin']}:players:languages", data.username)
+    await redis.hdel(f"game:{session['game_pin']}:players:custom_fields", data.username)
     await sio.leave_room(player_sid, session["game_pin"])
     await sio.emit("kick", room=player_sid)
 
