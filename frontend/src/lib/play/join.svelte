@@ -8,11 +8,13 @@ SPDX-License-Identifier: MPL-2.0
 	import { socket } from '$lib/socket';
 	import { onDestroy, onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { replaceState } from '$app/navigation';
 	import * as Sentry from '@sentry/browser';
 	import { getLocalization } from '$lib/i18n';
 	import BrownButton from '$lib/components/buttons/brown.svelte';
 	import { hcaptcha_site_key, recaptcha_key, sentry_dsn } from '$lib/config';
 	import { languageLabel } from '$lib/languages';
+	import LanguageToggle from '$lib/language-toggle.svelte';
 
 	const { t } = getLocalization();
 
@@ -93,6 +95,10 @@ SPDX-License-Identifier: MPL-2.0
 		const json = await res.json();
 		game_mode = json.game_mode;
 		if (res.status === 200) {
+			// Keep the pin across a reload (e.g. the language toggle) so it lands back on the username step.
+			// A query-only URL is relative to the current page, so there is no path to resolve.
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			replaceState(`?pin=${game_pin}`, {});
 			captcha_enabled = json.enabled;
 			custom_field = json.custom_field;
 			quiz_languages = json.languages ?? [];
@@ -216,6 +222,10 @@ SPDX-License-Identifier: MPL-2.0
 		<script src="https://www.google.com/recaptcha/api.js?render={recaptcha_key}"></script>
 	{/if}
 </svelte:head>
+
+<div class="fixed top-2 right-2 z-10">
+	<LanguageToggle compact />
+</div>
 
 {#if game_pin === '' || game_pin.length < 6}
 	<div class="flex flex-col justify-center align-center w-screen h-screen">

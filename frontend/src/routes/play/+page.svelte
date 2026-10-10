@@ -63,7 +63,7 @@ SPDX-License-Identifier: MPL-2.0
 	}
 
 	const confirmUnload = (event: Event) => {
-		if (preventReload) {
+		if (preventReload && gameData !== undefined) {
 			event.preventDefault();
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore
