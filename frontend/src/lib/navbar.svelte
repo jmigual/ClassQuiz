@@ -10,6 +10,7 @@ SPDX-License-Identifier: MPL-2.0
 	import { signedIn, pathname } from '$lib/stores';
 	import { createTippy } from 'svelte-tippy';
 	import BrownButton from '$lib/components/buttons/brown.svelte';
+	import LanguageToggle from '$lib/language-toggle.svelte';
 	import { browser } from '$app/environment';
 	import { beforeNavigate } from '$app/navigation';
 	import { draw, slide } from 'svelte/transition';
@@ -106,6 +107,7 @@ SPDX-License-Identifier: MPL-2.0
 				<BrownButton href="https://mawoka.eu/donate" target="_blank"
 					>{$t('navbar.donate')} <span class="">❤️</span></BrownButton
 				>
+				<LanguageToggle compact />
 				<div class="lg:flex items-center justify-center">
 					{#if darkMode}
 						<button
@@ -177,6 +179,7 @@ SPDX-License-Identifier: MPL-2.0
 
 			<!-- Dark/Light mode toggle + Open/Close menu -->
 			<div class="flex items-center">
+				<LanguageToggle compact />
 				{#if darkMode}
 					<!-- Sun icon -->
 					<button
