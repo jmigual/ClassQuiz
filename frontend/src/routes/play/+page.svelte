@@ -166,7 +166,7 @@ SPDX-License-Identifier: MPL-2.0
 			if (data) gameData = data;
 			// Swapped in place, without a new `unique`, so the timer and any pick carry on.
 			if (q && q.question_index === question_index) {
-				if (q.question.type === QuizQuestionType.ORDER) {
+				if (q.question.type === QuizQuestionType.ORDER && Array.isArray(question.answers)) {
 					// The player may have reordered; the server's order is the same in every language, so
 					// each item's id is its position there.
 					q.question.answers = question.answers.map((a) => ({
