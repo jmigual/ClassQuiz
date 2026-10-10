@@ -40,7 +40,7 @@ SPDX-License-Identifier: MPL-2.0
 		description: string;
 		answers: Answers;
 		type: QuizQuestionType;
-	}[] = [
+	}[] = $derived([
 		{
 			name: $t('words.multiple_choice'),
 			description: $t('editor.abcd_description'),
@@ -82,7 +82,7 @@ SPDX-License-Identifier: MPL-2.0
 			},
 			type: QuizQuestionType.RANGE
 		}
-	];
+	]);
 
 	const add_question = (index: number) => {
 		const empty_question: Question = {

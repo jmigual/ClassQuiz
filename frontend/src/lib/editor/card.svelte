@@ -79,14 +79,14 @@ SPDX-License-Identifier: MPL-2.0
 		data.questions;
 	});
 
-	const type_to_name = {
+	const type_to_name = $derived({
 		RANGE: $t('words.range'),
 		ABCD: $t('words.multiple_choice'),
 		VOTING: $t('words.voting'),
 		TEXT: $t('words.text'),
 		ORDER: $t('words.order'),
 		CHECK: $t('words.check_choice')
-	};
+	});
 
 	/*
     if (typeof data.questions[selected_question].type !== QuizQuestionType) {

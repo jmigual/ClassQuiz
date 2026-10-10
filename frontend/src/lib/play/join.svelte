@@ -95,7 +95,7 @@ SPDX-License-Identifier: MPL-2.0
 		const json = await res.json();
 		game_mode = json.game_mode;
 		if (res.status === 200) {
-			// Keep the pin across a reload (e.g. the language toggle) so it lands back on the username step.
+			// Keep the pin across a reload (e.g. a failed captcha) so it lands back on the username step.
 			// A query-only URL is relative to the current page, so there is no path to resolve.
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			replaceState(`?pin=${game_pin}`, {});
@@ -224,7 +224,10 @@ SPDX-License-Identifier: MPL-2.0
 </svelte:head>
 
 <div class="fixed top-2 right-2 z-10">
-	<LanguageToggle compact />
+	<LanguageToggle
+		compact
+		onchange={(code) => (selected_language = quiz_languages.includes(code) ? code : '')}
+	/>
 </div>
 
 {#if game_pin === '' || game_pin.length < 6}

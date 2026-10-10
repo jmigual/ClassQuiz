@@ -28,7 +28,7 @@ SPDX-License-Identifier: MPL-2.0
 		clothe_graphic_type: 11
 	};
 
-	const translation_map = {
+	const translation_map = $derived({
 		skin_color: $t('avatar_settings.skin_color'),
 		top_type: $t('avatar_settings.top_type'),
 		hair_color: $t('avatar_settings.hair_color'),
@@ -41,7 +41,7 @@ SPDX-License-Identifier: MPL-2.0
 		clothe_type: $t('avatar_settings.clothe_type'),
 		clothe_color: $t('avatar_settings.clothe_color'),
 		clothe_graphic_type: $t('avatar_settings.clothe_graphic_type')
-	};
+	});
 
 	let data = $state({
 		skin_color: 0,

@@ -54,7 +54,7 @@ SPDX-License-Identifier: MPL-2.0
 	let selected_create_thing = $state(SelectedCreateThing.Create);
 	let selected_play_thing = $state(SelectedPlayThing.Select);
 
-	const classquiz_reasons = [
+	const classquiz_reasons = $derived([
 		{
 			headline: $t('index_page.no_player_limit'),
 			content: $t('index_page.no_player_limit_content')
@@ -99,7 +99,7 @@ SPDX-License-Identifier: MPL-2.0
 			headline: $t('index_page.community_driven'),
 			content: $t('index_page.community_driven_content')
 		}
-	];
+	]);
 	let selected_classquiz_reason = $state(0);
 </script>
 

@@ -34,7 +34,7 @@ export const initLocalizationContext = (start_lanugage: string): { i18n: I18nSer
 	// skipcq: JS-0357
 	setLocalization({
 		t: tranlator.translate,
-		currentLanguage: locale
+		currentLanguage: tranlator.locale
 	});
 
 	return {

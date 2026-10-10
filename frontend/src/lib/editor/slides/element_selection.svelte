@@ -41,7 +41,7 @@ SPDX-License-Identifier: MPL-2.0
 		type: ElementTypes;
 		icon: string | undefined;
 		shortcut: string;
-	}> = [
+	}> = $derived([
 		{
 			name: $t('editor.slide.headline'),
 			description: $t('editor.slide.headline_description'),
@@ -70,7 +70,7 @@ SPDX-License-Identifier: MPL-2.0
 			icon: undefined,
 			shortcut: 'c'
 		}
-	];
+	]);
 </script>
 
 <div
