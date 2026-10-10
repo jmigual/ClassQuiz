@@ -23,7 +23,7 @@ from classquiz.db.models import (
     AnswerDataList,
 )
 from classquiz.auth import check_api_key
-from classquiz.socket_server import emit_per_player_language, player_question, sio, snapshot_player_languages
+from classquiz.socket_server import emit_per_player_language, player_question, sio
 
 settings = settings()
 
@@ -196,7 +196,6 @@ async def set_next_question(game_pin: str, question_number: int, api_key: str):
     game_data.current_question = question_number
     await redis.set(f"game:{game_pin}", game_data.model_dump_json(), ex=18000)
 
-    await snapshot_player_languages(game_pin)
     base_question = game_data.questions[question_number]
     payloads: dict[str | None, dict] = {}
 

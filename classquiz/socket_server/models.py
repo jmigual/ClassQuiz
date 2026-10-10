@@ -63,6 +63,7 @@ class SubmitAnswerData(BaseModel):
     question_index: int
     answer: str | int
     complex_answer: list[SubmitAnswerDataOrderType] | None = None
+    language: str | None = None
 
 
 class KickPlayerInput(BaseModel):

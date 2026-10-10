@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: 2025 Marlon W (Mawoka)
 #
 # SPDX-License-Identifier: MPL-2.0
-"""A player's language switch applies from the next question, never to the one on screen.
+"""A player's language can change while a question is live.
 
-`game:{pin}:players:languages` holds what players last picked; `...:question_languages` is a copy
-taken when each question goes out, and is what emits and scoring read.
+`game:{pin}:players:languages` holds what players last picked and is what emits read; a submitted
+answer carries the language it was given in and is scored in that language.
 """
 
+import json
 import random
 from datetime import datetime
 from unittest.mock import AsyncMock
@@ -30,7 +31,6 @@ PIN = "123456"
 ADMIN_SID = "admin-sid"
 ALICE_SID = "alice-sid"
 LANGUAGES_KEY = f"game:{PIN}:players:languages"
-COPY_KEY = f"game:{PIN}:players:question_languages"
 
 
 @pytest.fixture
@@ -59,17 +59,10 @@ def admin_session(monkeypatch):
     )
 
 
-@pytest.mark.asyncio
-async def test_answer_scores_against_the_language_the_question_went_out_in(mocks, monkeypatch):
-    redis, _sio, _game = mocks
-
-    async def hget(key, field):
-        return "es" if (key, field) == (COPY_KEY, "alice") else None
-
+async def alice_submits(redis, monkeypatch, **answer):
     async def get(key):
         return datetime.now().isoformat() if key.endswith(":current_time") else None
 
-    redis.hget.side_effect = hget
     redis.get.side_effect = get
     redis.scard.return_value = 5
     monkeypatch.setattr(
@@ -79,17 +72,41 @@ async def test_answer_scores_against_the_language_the_question_went_out_in(mocks
     )
     monkeypatch.setattr(socket_server, "has_already_answered", AsyncMock(return_value=False))
 
-    await socket_server.submit_answer(ALICE_SID, {"question_index": 0, "answer": "cuatro"})
+    await socket_server.submit_answer(ALICE_SID, {"question_index": 0, **answer})
 
     _key, _username, score = redis.hincrby.await_args.args
-    assert score > 0
+    return score
 
 
 @pytest.mark.asyncio
-async def test_solutions_follow_the_language_the_question_went_out_in(mocks, monkeypatch):
+async def test_answer_scores_in_the_language_it_was_submitted_in(mocks, monkeypatch):
+    redis, _sio, _game = mocks
+
+    assert await alice_submits(redis, monkeypatch, answer="cuatro", language="es") > 0
+
+
+@pytest.mark.asyncio
+async def test_answer_is_stored_in_the_authored_wording(mocks, monkeypatch):
+    redis, _sio, _game = mocks
+
+    await alice_submits(redis, monkeypatch, answer="cuatro", language="es")
+
+    _key, stored = redis.set.await_args.args
+    assert json.loads(stored)[0]["answer"] == "four"
+
+
+@pytest.mark.asyncio
+async def test_answer_in_an_unknown_language_is_scored_against_the_authored_wording(mocks, monkeypatch):
+    redis, _sio, _game = mocks
+
+    assert await alice_submits(redis, monkeypatch, answer="four", language="xx") > 0
+
+
+@pytest.mark.asyncio
+async def test_solutions_follow_the_players_language(mocks, monkeypatch):
     redis, sio, game = mocks
     admin_session(monkeypatch)
-    redis.hgetall.side_effect = hash_only_for(COPY_KEY, {"alice": "es"})
+    redis.hgetall.side_effect = hash_only_for(LANGUAGES_KEY, {"alice": "es"})
     redis.smembers.return_value = {GamePlayer(username="alice", sid=ALICE_SID).model_dump_json()}
 
     await socket_server.show_solutions(ADMIN_SID, {})
@@ -99,30 +116,20 @@ async def test_solutions_follow_the_language_the_question_went_out_in(mocks, mon
 
 
 @pytest.mark.asyncio
-async def test_api_question_start_copies_player_languages_and_emits_in_them(mocks, monkeypatch):
+async def test_api_question_start_emits_in_the_players_language(mocks, monkeypatch):
     redis, sio, game = mocks
     redis.get.return_value = game.model_dump_json()
     redis.smembers.return_value = {GamePlayer(username="alice", sid=ALICE_SID).model_dump_json()}
-    # The emit reads what the snapshot wrote, so the hashes have to behave like hashes.
-    hashes = {LANGUAGES_KEY: {"alice": "es"}}
-
-    async def hset(key, mapping):
-        hashes[key] = mapping
-
-    async def hgetall(key):
-        return hashes.get(key, {})
-
-    redis.hgetall.side_effect = hgetall
-    redis.hset.side_effect = hset
+    redis.hgetall.side_effect = hash_only_for(LANGUAGES_KEY, {"alice": "es"})
     monkeypatch.setattr(live, "redis", redis)
     monkeypatch.setattr(live, "sio", sio)
     monkeypatch.setattr(live, "check_api_key", AsyncMock(return_value=game.user_id))
 
     await live.set_next_question(PIN, 0, "api-key")
 
-    redis.hset.assert_awaited_once_with(COPY_KEY, mapping={"alice": "es"})
     (_event, payload), _kwargs = next(c for c in sio.emit.await_args_list if c.kwargs["room"] == ALICE_SID)
     assert payload["question"]["question"] == "¿Cuánto es 2+2?"
+    assert payload["language"] == "es"
 
 
 @pytest.mark.asyncio
@@ -142,28 +149,6 @@ async def test_rejoin_greets_the_player_in_their_chosen_language(mocks, monkeypa
     await socket_server.rejoin_game(ALICE_SID, {"game_pin": PIN, "username": "alice", "old_sid": "old-sid"})
 
     sio.emit.assert_any_await("rejoined_game", game.to_player_data("es"), room=ALICE_SID)
-
-
-@pytest.mark.asyncio
-async def test_question_start_copies_player_languages(mocks, monkeypatch):
-    redis, _sio, _game = mocks
-    admin_session(monkeypatch)
-    redis.smembers.return_value = set()
-    redis.hgetall.side_effect = hash_only_for(LANGUAGES_KEY, {"alice": "es"})
-
-    await socket_server.set_question_number(ADMIN_SID, "0")
-
-    redis.delete.assert_awaited_once_with(COPY_KEY)
-    redis.hset.assert_awaited_once_with(COPY_KEY, mapping={"alice": "es"})
-
-    redis.delete.reset_mock()
-    redis.hset.reset_mock()
-    redis.hgetall.side_effect = hash_only_for(LANGUAGES_KEY, {})
-
-    await socket_server.set_question_number(ADMIN_SID, "0")
-
-    redis.delete.assert_awaited_once_with(COPY_KEY)
-    redis.hset.assert_not_awaited()
 
 
 def player_session(monkeypatch, **overrides):

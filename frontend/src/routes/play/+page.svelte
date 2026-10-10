@@ -55,6 +55,7 @@ SPDX-License-Identifier: MPL-2.0
 	});
 
 	let question: Question = $state();
+	let question_language: string | null = $state(null);
 
 	let preventReload = true;
 
@@ -122,6 +123,7 @@ SPDX-License-Identifier: MPL-2.0
 		solution = undefined;
 		restart();
 		question = data.question;
+		question_language = data.language;
 		question_index = data.question_index;
 		answer_results = undefined;
 	});
@@ -204,7 +206,14 @@ SPDX-License-Identifier: MPL-2.0
 		{:else if gameMeta.started && gameData !== undefined && question_index !== '' && answer_results === undefined}
 			{#key unique}
 				<div class="text-black dark:text-black">
-					<Question bind:game_mode bind:question {question_index} {solution} {bg_color} />
+					<Question
+						bind:game_mode
+						bind:question
+						{question_index}
+						{solution}
+						{bg_color}
+						language={question_language}
+					/>
 				</div>
 			{/key}
 		{:else if gameMeta.started && answer_results !== undefined}

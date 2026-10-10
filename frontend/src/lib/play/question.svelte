@@ -26,6 +26,8 @@ SPDX-License-Identifier: MPL-2.0
 		question_index: string | number;
 		solution: any;
 		bg_color?: string;
+		// Language the question on screen is worded in; the server scores the answer against it.
+		language?: string | null;
 	}
 
 	let {
@@ -33,7 +35,8 @@ SPDX-License-Identifier: MPL-2.0
 		game_mode = $bindable(),
 		question_index,
 		solution,
-		bg_color
+		bg_color,
+		language
 	}: Props = $props();
 
 	if (question.type === undefined) {
@@ -75,7 +78,8 @@ SPDX-License-Identifier: MPL-2.0
 		selected_answer = answer;
 		socket.emit('submit_answer', {
 			question_index: question_index,
-			answer: answer
+			answer: answer,
+			language
 		});
 	};
 
@@ -88,7 +92,8 @@ SPDX-License-Identifier: MPL-2.0
 		socket.emit('submit_answer', {
 			question_index: question_index,
 			answer: 'a',
-			complex_answer: new_array
+			complex_answer: new_array,
+			language
 		});
 	};
 
