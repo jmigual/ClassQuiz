@@ -152,6 +152,13 @@ class QuestionTranslation(BaseModel):
     answers: list[str] = []
 
 
+class QuizTranslation(BaseModel):
+    """One language's title and description of a quiz. A blank field means "use the authored text"."""
+
+    title: str = ""
+    description: str = ""
+
+
 class QuizQuestion(BaseModel):
     question: str
     time: str  # in Secs
@@ -219,6 +226,7 @@ class QuizInput(BaseModel):
     background_image: str | None = None
     languages: list[str] = []
     original_language: str | None = None
+    translations: dict[str, QuizTranslation] | None = None
 
 
 class Quiz(ormar.Model):
@@ -242,6 +250,7 @@ class Quiz(ormar.Model):
     mod_rating: int | None = ormar.SmallInteger(nullable=True)
     languages: list[str] | None = ormar.JSON(nullable=True)
     original_language: str | None = ormar.Text(nullable=True)
+    translations: dict | None = ormar.JSON(nullable=True)
 
     ormar_config = ormar.OrmarConfig(
         tablename="quiz",
@@ -296,6 +305,7 @@ class PlayGame(BaseModel):
     question_show: bool = False
     languages: list[str] = []
     original_language: str | None = None
+    translations: dict[str, QuizTranslation] | None = None
 
     @classmethod
     async def get_from_redis(self, game_pin: str) -> Self:

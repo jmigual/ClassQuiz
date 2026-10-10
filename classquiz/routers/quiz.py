@@ -127,6 +127,7 @@ async def start_quiz(
         background_image=quiz.background_image,
         languages=quiz.languages or [],
         original_language=quiz.original_language,
+        translations=quiz.translations,
     )
     code = None
     if cqcs_enabled:

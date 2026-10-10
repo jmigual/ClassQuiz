@@ -89,6 +89,10 @@ async def finish_edit(edit_id: str, quiz_input: QuizInput):
     quiz_input.description = bleach.clean(quiz_input.description, tags=ALLOWED_TAGS_FOR_QUIZ, strip=True)
     if quiz_input.background_color is not None:
         quiz_input.background_color = bleach.clean(quiz_input.background_color, tags=[], strip=True)
+    # Translated title and description are rendered like the authored ones, so they get the same scrub.
+    for translation in (quiz_input.translations or {}).values():
+        translation.title = bleach.clean(translation.title, tags=ALLOWED_TAGS_FOR_QUIZ, strip=True)
+        translation.description = bleach.clean(translation.description, tags=ALLOWED_TAGS_FOR_QUIZ, strip=True)
 
     # Language names are author-supplied and shown as plain text. Unescape what bleach encoded so
     # an "&" survives as itself, and de-duplicate case-insensitively like the editor does.
@@ -164,6 +168,7 @@ async def finish_edit(edit_id: str, quiz_input: QuizInput):
         quiz.background_color = quiz_input.background_color
         quiz.background_image = quiz_input.background_image
         quiz.languages = quiz_input.languages
+        quiz.translations = quiz_input.model_dump()["translations"]
         quiz.original_language = quiz_input.original_language
         quiz.mod_rating = None
         for image in images_to_delete:
