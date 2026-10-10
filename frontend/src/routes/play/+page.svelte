@@ -15,6 +15,7 @@ SPDX-License-Identifier: MPL-2.0
 	import ShowEndScreen from '$lib/play/admin/final_results.svelte';
 	import KahootResults from '$lib/play/results_kahoot.svelte';
 	import { getLocalization } from '$lib/i18n';
+	import LanguageToggle from '$lib/language-toggle.svelte';
 	import Cookies from 'js-cookie';
 	const { t } = getLocalization();
 
@@ -155,6 +156,21 @@ SPDX-License-Identifier: MPL-2.0
 		solution = data;
 	});
 
+	// The server answers with the player's data in the new language, or nothing if it ignored the change.
+	const switch_language = (code: string) => {
+		socket.emit('set_language', { language: code }, (data) => {
+			if (data) gameData = data;
+		});
+	};
+
+	// Mirrors the question branch of the markup below; the toggle would cover its answers there.
+	let question_showing = $derived(
+		gameMeta.started &&
+			question_index !== '' &&
+			answer_results === undefined &&
+			JSON.stringify(final_results) === JSON.stringify([null])
+	);
+
 	let bg_color = $derived(gameData ? gameData.background_color : undefined);
 
 	// The rest
@@ -169,6 +185,11 @@ SPDX-License-Identifier: MPL-2.0
 	style="background: {bg_color ? bg_color : 'transparent'}"
 	class:text-black={bg_color}
 >
+	{#if gameData !== undefined && !question_showing}
+		<div class="fixed top-2 right-2 z-10">
+			<LanguageToggle compact onchange={switch_language} />
+		</div>
+	{/if}
 	<div>
 		{#if !gameMeta.started && gameData === undefined}
 			<JoinGame bind:game_pin bind:game_mode bind:username />
