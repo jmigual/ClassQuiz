@@ -297,8 +297,8 @@ async def list_api_keys(user: User = Depends(get_current_user)):
 
 
 @router.delete("/api_keys")
-async def delete_api_key(api_key: str, _: User = Depends(get_current_user)):
-    key = await ApiKey.objects.get_or_none(key=api_key)
+async def delete_api_key(api_key: str, user: User = Depends(get_current_user)):
+    key = await ApiKey.objects.get_or_none(key=api_key, user=user)
     if key is None:
         raise HTTPException(status_code=404, detail="Key not found")
     await redis.delete(f"apikey:{key.key}")
